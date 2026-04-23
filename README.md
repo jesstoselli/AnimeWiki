@@ -28,10 +28,10 @@ https://github.com/user-attachments/assets/25c90d25-fa4a-48b1-a2e5-d2a1e1d17fef
 <!-- Substitute these with real screenshots captured on the emulator. -->
 <table>
   <tr>
-    <td><img src="docs/screenshots/top_anime.png" width="220" alt="Top anime grid"/></td>
-    <td><img src="docs/screenshots/details.png" width="220" alt="Anime details"/></td>
-    <td><img src="docs/screenshots/search.png" width="220" alt="Search in action"/></td>
-    <td><img src="docs/screenshots/offline.png" width="220" alt="Offline state"/></td>
+    <td><img src="app/docs/screenshots/top_anime.png" width="220" alt="Top anime grid"/></td>
+    <td><img src="app/docs/screenshots/details.png" width="220" alt="Anime details"/></td>
+    <td><img src="app/docs/screenshots/search.png" width="220" alt="Search in action"/></td>
+    <td><img src="app/docs/screenshots/offline.png" width="220" alt="Offline state"/></td>
   </tr>
   <tr>
     <td align="center"><sub>Top anime grid</sub></td>
@@ -49,7 +49,7 @@ https://github.com/user-attachments/assets/25c90d25-fa4a-48b1-a2e5-d2a1e1d17fef
 - **Rich details screen** with synopsis, genres, studios, airing info, and score
 - **Reactive search** that debounces user input and swaps data sources on the fly
 - **Pull-to-refresh** on the main grid
-- **Offline-first** — cached content is shown instantly on cold start, with a discreet error banner when the network is unreachable
+- **Offline-first** cached content is shown instantly on cold start, with a discreet error banner when the network is unreachable
 - **Custom "Sakura Dream" Material 3 theme** with light/dark color schemes and the Quicksand typeface
 
 ---
@@ -99,7 +99,7 @@ Layered, single-module, MVVM with a unidirectional data flow.
 
 - **The UI never talks to the network directly.** It observes `Flow<PagingData>` from the ViewModel.
 - **Room is the single source of truth for the top anime list.** The `RemoteMediator` is responsible for filling and refreshing it from the Jikan API.
-- **Search results are transient** (no caching) — a lightweight `PagingSource` fetches directly from the API.
+- **Search results are transient** (no caching) a lightweight `PagingSource` fetches directly from the API.
 
 ---
 
@@ -107,7 +107,7 @@ Layered, single-module, MVVM with a unidirectional data flow.
 
 ### Offline-first pagination with `RemoteMediator`
 
-The top grid doesn't just cache a few items — it **persists paginated state** (`prev`/`next` page keys per anime) so scrolling, closing the app, and reopening offline all behave naturally.
+The top grid doesn't just cache a few items it **persists paginated state** (`prev`/`next` page keys per anime) so scrolling, closing the app, and reopening offline all behave naturally.
 
 ```kotlin
 override suspend fun load(
@@ -165,8 +165,8 @@ The "Sakura Dream" palette is tuned so user-chosen brand colors become `primaryC
 
 ```kotlin
 private val SakuraLightColors = lightColorScheme(
-    primary = SakuraRose,           // deep rose — WCAG AA against white
-    primaryContainer = SakuraPink,  // the original #F48FB1 — soft, gentle
+    primary = SakuraRose,           // deep rose WCAG AA against white
+    primaryContainer = SakuraPink,  // the original #F48FB1 soft, gentle
     secondary = LavenderPlum,
     secondaryContainer = LavenderMist,
     tertiary = MatchaDeepGreen,
@@ -235,7 +235,7 @@ The Jikan API requires no authentication or API key.
 
 ## 🙏 Credits
 
-- **Data**: [Jikan API v4](https://jikan.moe/) — unofficial MyAnimeList REST wrapper
+- **Data**: [Jikan API v4](https://jikan.moe/) unofficial MyAnimeList REST wrapper
 - **Posters & metadata**: © [MyAnimeList](https://myanimelist.net/) and respective rights holders
 - **Typeface**: [Quicksand](https://fonts.google.com/specimen/Quicksand) via Google Fonts
 
