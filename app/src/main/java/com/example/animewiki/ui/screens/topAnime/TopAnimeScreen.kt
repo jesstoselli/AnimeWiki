@@ -19,10 +19,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -30,8 +32,10 @@ import androidx.paging.compose.itemKey
 import com.example.animewiki.domain.model.Anime
 import com.example.animewiki.ui.components.AnimeWikiScaffold
 import com.example.animewiki.ui.screens.topAnime.components.AnimeCard
+import com.example.animewiki.ui.screens.topAnime.components.EmptySearchState
 import com.example.animewiki.ui.screens.topAnime.components.FullScreenError
 import com.example.animewiki.ui.screens.topAnime.components.OfflineBanner
+import com.example.animewiki.ui.screens.topAnime.components.SearchField
 import com.example.animewiki.ui.screens.topAnime.components.SkeletonGrid
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,32 +44,47 @@ fun TopAnimeScreen(
     onAnimeClick: (Int) -> Unit,
     viewModel: TopAnimeViewModel = hiltViewModel()
 ) {
-    val items = viewModel.topAnime.collectAsLazyPagingItems()
+    val items = viewModel.animeList.collectAsLazyPagingItems()
+    val query by viewModel.query.collectAsStateWithLifecycle()
 
     AnimeWikiScaffold(title = "Top Anime") { padding ->
-        val isEmpty = items.itemCount == 0
-        val refreshState = items.loadState.refresh
-
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            when {
-                isEmpty && refreshState is LoadState.Loading -> SkeletonGrid(
-                    modifier = Modifier.fillMaxSize()
-                )
+            SearchField(
+                query = query,
+                onQueryChange = viewModel::onQueryChange,
+                onClear = viewModel::clearQuery,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            )
 
-                isEmpty && refreshState is LoadState.Error -> FullScreenError(
-                    message = refreshState.error.message ?: "Tente novamente",
-                    onRetry = { items.retry() }
-                )
+            val isEmpty = items.itemCount == 0
+            val refreshState = items.loadState.refresh
 
-                else -> TopAnimeContent(items, onAnimeClick)
-            }
+            Box(modifier = Modifier.fillMaxSize()) {
+                when {
+                    isEmpty && refreshState is LoadState.Loading -> SkeletonGrid(
+                        modifier = Modifier.fillMaxSize()
+                    )
 
-            if (refreshState is LoadState.Error && !isEmpty) {
-                OfflineBanner(modifier = Modifier.align(Alignment.TopCenter))
+                    isEmpty && refreshState is LoadState.Error -> FullScreenError(
+                        message = refreshState.error.message ?: "Tente novamente",
+                        onRetry = { items.retry() }
+                    )
+
+                    isEmpty && refreshState is LoadState.NotLoading && query.isNotBlank() ->
+                        EmptySearchState(query = query)
+
+                    else -> TopAnimeContent(items, onAnimeClick)
+                }
+
+                if (refreshState is LoadState.Error && !isEmpty) {
+                    OfflineBanner(modifier = Modifier.align(Alignment.TopCenter))
+                }
             }
         }
     }

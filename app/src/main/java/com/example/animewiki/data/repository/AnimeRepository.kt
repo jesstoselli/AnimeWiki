@@ -4,9 +4,11 @@ import androidx.paging.ExperimentalPagingApi
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import androidx.paging.filter
 import androidx.paging.map
 import com.example.animewiki.data.local.AppDatabase
 import com.example.animewiki.data.mapper.toDomain
+import com.example.animewiki.data.paging.AnimeSearchPagingSource
 import com.example.animewiki.data.paging.TopAnimeRemoteMediator
 import com.example.animewiki.data.remote.JikanApi
 import com.example.animewiki.domain.model.Anime
@@ -42,5 +44,17 @@ class AnimeRepository @Inject constructor(
         } catch (e: Exception) {
             cached  // offline: retorna o que tiver no cache
         }
+    }
+
+    fun searchAnime(query: String): Flow<PagingData<Anime>> = Pager(
+        config = PagingConfig(
+            pageSize = 25,
+            prefetchDistance = 10,
+            enablePlaceholders = false
+        ),
+        pagingSourceFactory = { AnimeSearchPagingSource(api, query) }
+    ).flow.map { pagingData ->
+        val seenIds = mutableSetOf<Int>()
+        pagingData.filter { anime -> seenIds.add(anime.id) }
     }
 }
