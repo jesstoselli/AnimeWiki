@@ -1,4 +1,4 @@
-package com.example.animewiki.ui.details
+package com.example.animewiki.ui.screens.details
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel

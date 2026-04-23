@@ -1,4 +1,4 @@
-package com.example.animewiki.ui.details
+package com.example.animewiki.ui.screens.details
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -37,7 +37,10 @@ fun AnimeDetailsScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer     // 👈 aqui
+                )
             )
         }
     ) { padding ->
@@ -96,10 +99,12 @@ private fun AnimeDetailsContent(anime: Anime, modifier: Modifier = Modifier) {
             )
 
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                anime.score?.let { Chip("★ ${"%.2f".format(it)}") }
-                anime.rank?.let { Chip("#${it}") }
-                anime.type?.let { Chip(it) }
-                anime.year?.let { Chip("$it") }
+                anime.score?.let {
+                    InfoChip("★ ${"%.2f".format(it)}", Tone.Tertiary)   // matcha
+                }
+                anime.rank?.let { InfoChip("#${it}", Tone.Primary) }    // sakura
+                anime.type?.let { InfoChip(it, Tone.Secondary) }         // lavender
+                anime.year?.let { InfoChip("$it", Tone.Secondary) }      // lavender
             }
 
             if (anime.genres.isNotEmpty()) {
@@ -108,7 +113,15 @@ private fun AnimeDetailsContent(anime: Anime, modifier: Modifier = Modifier) {
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     anime.genres.forEach { genre ->
-                        AssistChip(onClick = {}, label = { Text(genre) })
+                        AssistChip(
+                            onClick = {},
+                            label = { Text(genre) },
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            ),
+                            border = null
+                        )
                     }
                 }
             }
@@ -130,16 +143,22 @@ private fun AnimeDetailsContent(anime: Anime, modifier: Modifier = Modifier) {
     }
 }
 
+private enum class Tone { Primary, Secondary, Tertiary }
+
 @Composable
-private fun Chip(text: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = MaterialTheme.shapes.small
-    ) {
+private fun InfoChip(text: String, tone: Tone = Tone.Secondary) {
+    val scheme = MaterialTheme.colorScheme
+    val (bg, fg) = when (tone) {
+        Tone.Primary -> scheme.primaryContainer to scheme.onPrimaryContainer
+        Tone.Secondary -> scheme.secondaryContainer to scheme.onSecondaryContainer
+        Tone.Tertiary -> scheme.tertiaryContainer to scheme.onTertiaryContainer
+    }
+    Surface(color = bg, contentColor = fg, shape = MaterialTheme.shapes.small) {
         Text(
             text = text,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelMedium
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold
         )
     }
 }

@@ -7,7 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.animewiki.ui.details.AnimeDetailsScreen
+import com.example.animewiki.ui.screens.details.AnimeDetailsScreen
 import com.example.animewiki.ui.top.TopAnimeScreen
 
 object Destinations {
