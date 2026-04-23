@@ -27,7 +27,7 @@ kotlinxSerialization = "1.7.3"
 coil = "3.0.4"
 
 # Room
-room = "2.6.1"
+room = "2.7.1"
 
 # Paging 3
 paging = "3.3.6"
@@ -88,6 +88,7 @@ coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+androidx-room-paging = { module = "androidx.room:room-paging", version.ref = "room" }
 
 # Paging 3
 androidx-paging-runtime = { module = "androidx.paging:paging-runtime", version.ref = "paging" }
