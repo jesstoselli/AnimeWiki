@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.example.animewiki.data.local.AppDatabase
 import com.example.animewiki.data.local.dao.AnimeDao
+import com.example.animewiki.data.local.dao.FavoriteDao
 import com.example.animewiki.data.local.dao.RemoteKeyDao
 import dagger.Module
 import dagger.Provides
@@ -28,4 +29,7 @@ object DatabaseModule {
 
     @Provides
     fun provideRemoteKeyDao(db: AppDatabase): RemoteKeyDao = db.remoteKeyDao()
+
+    @Provides
+    fun provideFavoriteDao(db: AppDatabase): FavoriteDao = db.favoriteDao()
 }

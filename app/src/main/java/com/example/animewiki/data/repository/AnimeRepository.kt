@@ -7,7 +7,9 @@ import androidx.paging.PagingData
 import androidx.paging.filter
 import androidx.paging.map
 import com.example.animewiki.data.local.AppDatabase
+import com.example.animewiki.data.local.dao.FavoriteDao
 import com.example.animewiki.data.mapper.toDomain
+import com.example.animewiki.data.mapper.toFavoriteEntity
 import com.example.animewiki.data.paging.AnimeSearchPagingSource
 import com.example.animewiki.data.paging.TopAnimeRemoteMediator
 import com.example.animewiki.data.remote.JikanApi
@@ -21,7 +23,8 @@ import javax.inject.Singleton
 @OptIn(ExperimentalPagingApi::class)
 class AnimeRepository @Inject constructor(
     private val api: JikanApi,
-    private val db: AppDatabase
+    private val db: AppDatabase,
+    private val favoriteDao: FavoriteDao
 ) {
     fun topAnime(): Flow<PagingData<Anime>> = Pager(
         config = PagingConfig(
@@ -56,5 +59,16 @@ class AnimeRepository @Inject constructor(
     ).flow.map { pagingData ->
         val seenIds = mutableSetOf<Int>()
         pagingData.filter { anime -> seenIds.add(anime.id) }
+    }
+
+    fun observeFavorites(): Flow<List<Anime>> =
+        favoriteDao.observeAll().map { list -> list.map { it.toDomain() } }
+
+    fun observeIsFavorite(id: Int): Flow<Boolean> =
+        favoriteDao.observeIsFavorite(id)
+
+    suspend fun toggleFavorite(anime: Anime, isCurrentlyFavorite: Boolean) {
+        if (isCurrentlyFavorite) favoriteDao.deleteById(anime.id)
+        else favoriteDao.insert(anime.toFavoriteEntity())
     }
 }

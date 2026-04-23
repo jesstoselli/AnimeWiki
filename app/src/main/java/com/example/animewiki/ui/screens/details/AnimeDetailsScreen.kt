@@ -11,11 +11,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,10 +47,25 @@ fun AnimeDetailsScreen(
     viewModel: AnimeDetailsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val isFavorite by viewModel.isFavorite.collectAsState()
+
+    val pageTitle = (state as? DetailsUiState.Success)?.anime?.title ?: "Detalhes"
 
     AnimeWikiScaffold(
-        title = (state as? DetailsUiState.Success)?.anime?.title ?: "Detalhes",
-        onBack = onBack
+        title = pageTitle,
+        onBack = onBack,
+        actions = {
+            if (state is DetailsUiState.Success) {
+                IconButton(onClick = viewModel::onToggleFavorite) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Default.Favorite
+                        else Icons.Default.FavoriteBorder,
+                        contentDescription = if (isFavorite) "Remover dos favoritos"
+                        else "Adicionar aos favoritos"
+                    )
+                }
+            }
+        }
     ) { padding ->
         when (val s = state) {
             is DetailsUiState.Loading -> Box(

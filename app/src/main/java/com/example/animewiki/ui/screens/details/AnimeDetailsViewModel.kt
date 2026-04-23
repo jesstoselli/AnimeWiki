@@ -7,8 +7,10 @@ import com.example.animewiki.data.repository.AnimeRepository
 import com.example.animewiki.domain.model.Anime
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -29,6 +31,13 @@ class AnimeDetailsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<DetailsUiState>(DetailsUiState.Loading)
     val uiState: StateFlow<DetailsUiState> = _uiState.asStateFlow()
 
+    val isFavorite: StateFlow<Boolean> = repository.observeIsFavorite(animeId)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = false
+        )
+
     init { load() }
 
     fun load() {
@@ -41,6 +50,13 @@ class AnimeDetailsViewModel @Inject constructor(
             } catch (e: Exception) {
                 DetailsUiState.Error(e.message ?: "Erro desconhecido")
             }
+        }
+    }
+
+    fun onToggleFavorite() {
+        val currentAnime = (_uiState.value as? DetailsUiState.Success)?.anime ?: return
+        viewModelScope.launch {
+            repository.toggleFavorite(currentAnime, isFavorite.value)
         }
     }
 }

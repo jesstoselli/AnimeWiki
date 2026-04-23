@@ -51,6 +51,7 @@ https://github.com/user-attachments/assets/25c90d25-fa4a-48b1-a2e5-d2a1e1d17fef
 - **Pull-to-refresh** on the main grid
 - **Offline-first** cached content is shown instantly on cold start, with a discreet error banner when the network is unreachable
 - **Custom "Sakura Dream" Material 3 theme** with light/dark color schemes and the Quicksand typeface
+- **Favorites** with a dedicated tab, persisting through a reactive Room query
 
 ---
 
@@ -226,7 +227,7 @@ The Jikan API requires no authentication or API key.
 - [x] Offline-first caching (Room + RemoteMediator)
 - [x] Reactive search with debounce
 - [x] Pull-to-refresh
-- [ ] Favorites screen (local CRUD)
+- [x] Favorites screen (local CRUD)
 - [ ] User preferences via DataStore (theme toggle)
 - [ ] Weekly top-anime push notification (WorkManager + Notifications)
 - [ ] Unit & integration tests

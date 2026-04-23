@@ -1,39 +1,126 @@
 package com.example.animewiki.ui.navigation
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.animewiki.ui.screens.details.AnimeDetailsScreen
+import com.example.animewiki.ui.screens.favorites.FavoritesScreen
 import com.example.animewiki.ui.screens.topAnime.TopAnimeScreen
 
-object Destinations {
-    const val TOP = "top"
+// Grafo de nível mais alto
+object Routes {
+    const val MAIN = "main"
     const val DETAILS = "details/{id}"
     fun details(id: Int) = "details/$id"
 }
 
+// Grafo interno das abas
+object Tabs {
+    const val TOP = "top"
+    const val FAVORITES = "favorites"
+}
+
+private data class TabItem(
+    val route: String,
+    val label: String,
+    val icon: ImageVector
+)
+
+private val tabs = listOf(
+    TabItem(Tabs.TOP, "Top", Icons.Default.Star),
+    TabItem(Tabs.FAVORITES, "Favoritos", Icons.Default.Favorite)
+)
+
 @Composable
-fun AnimeWikiNavHost(
-    navController: NavHostController = rememberNavController()
-) {
+fun AnimeWikiNavHost() {
+    val rootNavController = rememberNavController()
+
     NavHost(
-        navController = navController,
-        startDestination = Destinations.TOP
+        navController = rootNavController,
+        startDestination = Routes.MAIN
     ) {
-        composable(Destinations.TOP) {
-            TopAnimeScreen(
-                onAnimeClick = { id -> navController.navigate(Destinations.details(id)) }
+        composable(Routes.MAIN) {
+            MainTabs(
+                onAnimeClick = { id -> rootNavController.navigate(Routes.details(id)) }
             )
         }
+
         composable(
-            route = Destinations.DETAILS,
+            route = Routes.DETAILS,
             arguments = listOf(navArgument("id") { type = NavType.IntType })
         ) {
-            AnimeDetailsScreen(onBack = { navController.popBackStack() })
+            AnimeDetailsScreen(onBack = { rootNavController.popBackStack() })
+        }
+    }
+}
+
+@Composable
+private fun MainTabs(onAnimeClick: (Int) -> Unit) {
+    val tabNavController = rememberNavController()
+
+    Scaffold(
+        bottomBar = { MainBottomBar(tabNavController) },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ) { padding ->
+        NavHost(
+            navController = tabNavController,
+            startDestination = Tabs.TOP,
+            modifier = Modifier.padding(padding)
+        ) {
+            composable(Tabs.TOP) {
+                TopAnimeScreen(onAnimeClick = onAnimeClick)
+            }
+            composable(Tabs.FAVORITES) {
+                FavoritesScreen(onAnimeClick = onAnimeClick)
+            }
+        }
+    }
+}
+
+@Composable
+private fun MainBottomBar(navController: NavHostController) {
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.hierarchy
+        ?.firstOrNull()?.route
+
+    NavigationBar {
+        tabs.forEach { tab ->
+            NavigationBarItem(
+                selected = currentRoute == tab.route,
+                onClick = {
+                    navController.navigate(tab.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                icon = { Icon(tab.icon, contentDescription = null) },
+                label = { Text(tab.label) },
+                colors = NavigationBarItemDefaults.colors()
+            )
         }
     }
 }
