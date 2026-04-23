@@ -17,6 +17,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +31,7 @@ import com.example.animewiki.domain.model.Anime
 import com.example.animewiki.ui.components.AnimeWikiScaffold
 import com.example.animewiki.ui.screens.topAnime.components.AnimeCard
 import com.example.animewiki.ui.screens.topAnime.components.FullScreenError
+import com.example.animewiki.ui.screens.topAnime.components.OfflineBanner
 import com.example.animewiki.ui.screens.topAnime.components.SkeletonGrid
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,6 +63,10 @@ fun TopAnimeScreen(
 
                 else -> TopAnimeContent(items, onAnimeClick)
             }
+
+            if (refreshState is LoadState.Error && !isEmpty) {
+                OfflineBanner(modifier = Modifier.align(Alignment.TopCenter))
+            }
         }
     }
 }
@@ -70,52 +76,60 @@ internal fun TopAnimeContent(
     items: LazyPagingItems<Anime>,
     onAnimeClick: (Int) -> Unit
 ) {
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 160.dp),
-        contentPadding = PaddingValues(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+    val isRefreshing = items.loadState.refresh is LoadState.Loading
+
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = { items.refresh() },
         modifier = Modifier.fillMaxSize()
     ) {
-        items(
-            count = items.itemCount,
-            key = items.itemKey { it.id }
-        ) { index ->
-            val anime = items[index] ?: return@items
-            AnimeCard(anime = anime, onClick = { onAnimeClick(anime.id) })
-        }
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 160.dp),
+            contentPadding = PaddingValues(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(
+                count = items.itemCount,
+                key = items.itemKey { it.id }
+            ) { index ->
+                val anime = items[index] ?: return@items
+                AnimeCard(anime = anime, onClick = { onAnimeClick(anime.id) })
+            }
 
-        if (items.loadState.append is LoadState.Loading) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.primary
-                    )
+            if (items.loadState.append is LoadState.Loading) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
-        }
 
-        val appendError = items.loadState.append as? LoadState.Error
-        if (appendError != null) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        "Erro ao carregar mais: ${appendError.error.message ?: "desconhecido"}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Button(onClick = { items.retry() }) { Text("Tentar de novo") }
+            val appendError = items.loadState.append as? LoadState.Error
+            if (appendError != null) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            "Erro ao carregar mais: ${appendError.error.message ?: "desconhecido"}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Button(onClick = { items.retry() }) { Text("Tentar de novo") }
+                    }
                 }
             }
         }
