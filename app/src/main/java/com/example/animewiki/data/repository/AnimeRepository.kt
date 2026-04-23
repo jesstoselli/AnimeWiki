@@ -3,6 +3,7 @@ package com.example.animewiki.data.repository
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import com.example.animewiki.data.mapper.toDomain
 import com.example.animewiki.data.paging.TopAnimePagingSource
 import com.example.animewiki.data.remote.JikanApi
 import com.example.animewiki.domain.model.Anime
@@ -23,4 +24,8 @@ class AnimeRepository @Inject constructor(
         ),
         pagingSourceFactory = { TopAnimePagingSource(api) }
     ).flow
+
+    suspend fun getAnimeDetails(id: Int): Anime? {
+        return api.getAnimeDetails(id).data?.toDomain()
+    }
 }

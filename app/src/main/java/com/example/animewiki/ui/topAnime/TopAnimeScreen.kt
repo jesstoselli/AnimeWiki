@@ -19,6 +19,7 @@ import com.example.animewiki.domain.model.Anime
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopAnimeScreen(
+    onAnimeClick: (Int) -> Unit,
     viewModel: TopAnimeViewModel = hiltViewModel()
 ) {
     val items = viewModel.topAnime.collectAsLazyPagingItems()
@@ -50,7 +51,10 @@ fun TopAnimeScreen(
                     key = items.itemKey { it.id }
                 ) { index ->
                     val anime = items[index] ?: return@items
-                    AnimeCard(anime)
+                    AnimeCard(
+                        anime = anime,
+                        onClick = { onAnimeClick(anime.id) }
+                    )
                 }
 
                 if (items.loadState.append is LoadState.Loading) {
@@ -67,8 +71,11 @@ fun TopAnimeScreen(
 }
 
 @Composable
-private fun AnimeCard(anime: Anime) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+private fun AnimeCard(anime: Anime, onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Column {
             AsyncImage(
                 model = anime.imageUrl,

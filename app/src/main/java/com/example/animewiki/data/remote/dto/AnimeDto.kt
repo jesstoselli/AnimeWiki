@@ -21,12 +21,23 @@ data class AnimeDto(
     @SerialName("mal_id") val malId: Int,
     val title: String,
     @SerialName("title_english") val titleEnglish: String? = null,
+    @SerialName("title_Japanese") val titleJapanese: String? = null,
     val type: String? = null,
     val episodes: Int? = null,
     val score: Double? = null,
     val year: Int? = null,
     val images: AnimeImagesDto,
-    val synopsis: String? = null
+    val synopsis: String? = null,
+    val genres: List<NamedEntityDto>? = null,
+    val studios: List<NamedEntityDto>? = null,
+    val themes: List<NamedEntityDto>? = null,
+    val demographics: List<NamedEntityDto>? = null,
+    val aired: AiredDto? = null,
+    val trailer: TrailerDto? = null,
+    val status: String? = null,
+    val rating: String? = null,
+    val duration: String? = null,
+    val rank: Int? = null,
 )
 
 @Serializable

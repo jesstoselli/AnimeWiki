@@ -18,6 +18,14 @@ fun AnimeDto.toDomain(): Anime? {
         episodes = episodes,
         type = type,
         year = year,
-        synopsis = synopsis
+        synopsis = synopsis,
+        genres = genres.orEmpty().mapNotNull { it.name },
+        studios = studios.orEmpty().mapNotNull { it.name },
+        aired = aired?.string,
+        status = status,
+        rating = rating,
+        duration = duration,
+        rank = rank,
+        trailerYoutubeId = trailer?.youtubeId
     )
 }
