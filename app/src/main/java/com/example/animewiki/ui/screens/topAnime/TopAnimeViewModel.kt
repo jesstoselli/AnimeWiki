@@ -1,4 +1,4 @@
-package com.example.animewiki.ui.top
+package com.example.animewiki.ui.screens.topAnime
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

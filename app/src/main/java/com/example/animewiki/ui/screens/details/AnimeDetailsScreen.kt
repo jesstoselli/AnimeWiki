@@ -1,12 +1,26 @@
 package com.example.animewiki.ui.screens.details
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -15,6 +29,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.example.animewiki.domain.model.Anime
+import com.example.animewiki.ui.components.AnimeWikiScaffold
+import com.example.animewiki.ui.screens.details.components.DetailsScreenError
+import com.example.animewiki.ui.screens.details.components.InfoChip
+import com.example.animewiki.ui.screens.details.components.InfoRow
+import com.example.animewiki.ui.screens.details.components.Tone
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -24,44 +43,23 @@ fun AnimeDetailsScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = (state as? DetailsUiState.Success)?.anime?.title ?: "Detalhes",
-                        maxLines = 1
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer     // 👈 aqui
-                )
-            )
-        }
+    AnimeWikiScaffold(
+        title = (state as? DetailsUiState.Success)?.anime?.title ?: "Detalhes",
+        onBack = onBack
     ) { padding ->
         when (val s = state) {
             is DetailsUiState.Loading -> Box(
-                Modifier.fillMaxSize().padding(padding),
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
                 contentAlignment = Alignment.Center
             ) { CircularProgressIndicator() }
 
-            is DetailsUiState.Error -> Box(
-                Modifier.fillMaxSize().padding(padding).padding(24.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Erro ao carregar", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(8.dp))
-                    Text(s.message, style = MaterialTheme.typography.bodyMedium)
-                    Spacer(Modifier.height(16.dp))
-                    Button(onClick = viewModel::load) { Text("Tentar de novo") }
-                }
-            }
+            is DetailsUiState.Error -> DetailsScreenError(
+                errorMessage = s.message,
+                padding = padding,
+                onClick = viewModel::load
+            )
 
             is DetailsUiState.Success -> AnimeDetailsContent(
                 anime = s.anime,
@@ -127,7 +125,11 @@ private fun AnimeDetailsContent(anime: Anime, modifier: Modifier = Modifier) {
             }
 
             anime.synopsis?.let {
-                Text("Sinopse", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Sinopse",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
                 Text(it, style = MaterialTheme.typography.bodyMedium)
             }
 
@@ -140,43 +142,5 @@ private fun AnimeDetailsContent(anime: Anime, modifier: Modifier = Modifier) {
             InfoRow("Classificação", anime.rating)
             InfoRow("Estúdio", anime.studios.takeIf { it.isNotEmpty() }?.joinToString(", "))
         }
-    }
-}
-
-private enum class Tone { Primary, Secondary, Tertiary }
-
-@Composable
-private fun InfoChip(text: String, tone: Tone = Tone.Secondary) {
-    val scheme = MaterialTheme.colorScheme
-    val (bg, fg) = when (tone) {
-        Tone.Primary -> scheme.primaryContainer to scheme.onPrimaryContainer
-        Tone.Secondary -> scheme.secondaryContainer to scheme.onSecondaryContainer
-        Tone.Tertiary -> scheme.tertiaryContainer to scheme.onTertiaryContainer
-    }
-    Surface(color = bg, contentColor = fg, shape = MaterialTheme.shapes.small) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
-}
-
-@Composable
-private fun InfoRow(label: String, value: String?) {
-    if (value.isNullOrBlank()) return
-    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-        Text(
-            text = label,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            modifier = Modifier.weight(2f),
-            style = MaterialTheme.typography.bodyMedium
-        )
     }
 }

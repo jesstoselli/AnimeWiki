@@ -8,7 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.animewiki.ui.screens.details.AnimeDetailsScreen
-import com.example.animewiki.ui.top.TopAnimeScreen
+import com.example.animewiki.ui.screens.topAnime.TopAnimeScreen
 
 object Destinations {
     const val TOP = "top"
