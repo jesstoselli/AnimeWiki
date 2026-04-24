@@ -46,9 +46,13 @@ coroutines = "1.9.0"
 detekt = "1.23.7"
 
 # Tests
+coroutinesTest = "1.9.0"       # mesma versão das coroutines que você já tem
+turbine = "1.2.0"
+mockk = "1.13.13"
+roomTesting = "2.7.1"
 junit = "4.13.2"
 junitVersion = "1.3.0"
-espressoCore = "3.7.0"
+testRunner = "1.6.2"
 
 [libraries]
 # Core
@@ -116,9 +120,14 @@ androidx-paging-compose = { module = "androidx.paging:paging-compose", version.r
 detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
 
 # Tests
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutinesTest" }
+turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+mockk-android = { module = "io.mockk:mockk-android", version.ref = "mockk" }
+androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "roomTesting" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
-androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "testRunner" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
