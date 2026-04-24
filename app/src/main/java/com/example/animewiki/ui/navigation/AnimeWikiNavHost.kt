@@ -1,5 +1,6 @@
 package com.example.animewiki.ui.navigation
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -11,7 +12,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -77,7 +77,7 @@ fun AnimeWikiNavHost() {
             AnimeDetailsScreen(onBack = { rootNavController.popBackStack() })
         }
 
-        composable(Routes.SETTINGS) {                                                // 👈 novo
+        composable(Routes.SETTINGS) {
             SettingsScreen(onBack = { rootNavController.popBackStack() })
         }
     }

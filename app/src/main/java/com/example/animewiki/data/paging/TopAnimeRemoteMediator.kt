@@ -24,11 +24,18 @@ class TopAnimeRemoteMediator(
         return InitializeAction.LAUNCH_INITIAL_REFRESH
     }
 
+    // Error boundary: any network/DB failure is surfaced as MediatorResult.Error
+    // so Paging can retry. CancellationException is rethrown above.
+    @Suppress("TooGenericExceptionCaught")
     override suspend fun load(
         loadType: LoadType,
         state: PagingState<Int, AnimeEntity>
     ): MediatorResult {
-        Log.d("Mediator", "load() called: loadType=$loadType, stateItems=${state.pages.sumOf { it.data.size }}, anchor=${state.anchorPosition}")
+        val stateSize = state.pages.sumOf { it.data.size }
+        Log.d(
+            "Mediator",
+            "load() called: loadType=$loadType, stateItems=$stateSize, anchor=${state.anchorPosition}"
+        )
 
         val page = when (loadType) {
             LoadType.REFRESH -> 1
@@ -60,8 +67,11 @@ class TopAnimeRemoteMediator(
             val hasNext = response.pagination?.hasNextPage == true
             Log.d("Mediator", "page=$page returned ${response.data?.size} items, hasNext=$hasNext")
 
-            val baseIndex = if (loadType == LoadType.REFRESH) 0
-            else db.animeDao().maxPageIndex() + 1
+            val baseIndex = if (loadType == LoadType.REFRESH) {
+                0
+            } else {
+                db.animeDao().maxPageIndex() + 1
+            }
             val entities = response.data.orEmpty()
                 .mapIndexedNotNull { i, dto -> dto.toEntity(baseIndex + i) }
 

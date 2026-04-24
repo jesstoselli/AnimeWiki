@@ -19,10 +19,13 @@ class AnimeSearchPagingSource(
         }
     }
 
+    // Error boundary: surfaces any failure (network, parse, etc.) as LoadResult.Error
+    // so the UI can show its error state without crashing the app.
+    @Suppress("TooGenericExceptionCaught")
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Anime> {
         val page = params.key ?: 1
         return try {
-            if (page > 1) delay(400)  // rate-limit polite
+            if (page > 1) delay(400) // rate-limit polite
 
             val response = api.searchAnime(
                 query = query,

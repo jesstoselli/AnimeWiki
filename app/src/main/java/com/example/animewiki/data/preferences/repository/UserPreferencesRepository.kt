@@ -35,8 +35,11 @@ class UserPreferencesRepository @Inject constructor(
     val preferences: Flow<UserPreferences> = context.dataStore.data
         .catch { cause ->
             // se o arquivo for corrompido ou não existir, volta ao default em vez de crashar
-            if (cause is IOException) emit(emptyPreferences())
-            else throw cause
+            if (cause is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw cause
+            }
         }
         .map { prefs ->
             UserPreferences(

@@ -43,10 +43,15 @@ class AnimeDetailsViewModel @Inject constructor(
     fun load() {
         viewModelScope.launch {
             _uiState.value = DetailsUiState.Loading
+            // Error boundary: any network/serialization failure becomes UI error state.
+            @Suppress("TooGenericExceptionCaught")
             _uiState.value = try {
                 val anime = repository.getAnimeDetails(animeId)
-                if (anime != null) DetailsUiState.Success(anime)
-                else DetailsUiState.Error("Anime não encontrado")
+                if (anime != null) {
+                    DetailsUiState.Success(anime)
+                } else {
+                    DetailsUiState.Error("Anime não encontrado")
+                }
             } catch (e: Exception) {
                 DetailsUiState.Error(e.message ?: "Erro desconhecido")
             }

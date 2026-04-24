@@ -9,15 +9,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-internal enum class Tone { Primary, Secondary, Tertiary }
-
 @Composable
-internal fun InfoChip(text: String, tone: Tone = Tone.Secondary) {
+internal fun InfoChip(text: String, infoChipTone: InfoChipTone = InfoChipTone.Secondary) {
     val scheme = MaterialTheme.colorScheme
-    val (bg, fg) = when (tone) {
-        Tone.Primary -> scheme.primaryContainer to scheme.onPrimaryContainer
-        Tone.Secondary -> scheme.secondaryContainer to scheme.onSecondaryContainer
-        Tone.Tertiary -> scheme.tertiaryContainer to scheme.onTertiaryContainer
+    val (bg, fg) = when (infoChipTone) {
+        InfoChipTone.Primary -> scheme.primaryContainer to scheme.onPrimaryContainer
+        InfoChipTone.Secondary -> scheme.secondaryContainer to scheme.onSecondaryContainer
+        InfoChipTone.Tertiary -> scheme.tertiaryContainer to scheme.onTertiaryContainer
     }
     Surface(color = bg, contentColor = fg, shape = MaterialTheme.shapes.small) {
         Text(

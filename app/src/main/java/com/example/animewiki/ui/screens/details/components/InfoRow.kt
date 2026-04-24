@@ -12,9 +12,11 @@ import androidx.compose.ui.unit.dp
 @Composable
 internal fun InfoRow(label: String, value: String?) {
     if (value.isNullOrBlank()) return
-    Row(Modifier
-        .fillMaxWidth()
-        .padding(vertical = 4.dp)) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+    ) {
         Text(
             text = label,
             modifier = Modifier.weight(1f),

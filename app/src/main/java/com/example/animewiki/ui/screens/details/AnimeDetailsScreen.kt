@@ -39,8 +39,8 @@ import com.example.animewiki.domain.model.Anime
 import com.example.animewiki.ui.components.AnimeWikiScaffold
 import com.example.animewiki.ui.screens.details.components.DetailsScreenError
 import com.example.animewiki.ui.screens.details.components.InfoChip
+import com.example.animewiki.ui.screens.details.components.InfoChipTone
 import com.example.animewiki.ui.screens.details.components.InfoRow
-import com.example.animewiki.ui.screens.details.components.Tone
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -61,11 +61,17 @@ fun AnimeDetailsScreen(
             if (state is DetailsUiState.Success) {
                 IconButton(onClick = viewModel::onToggleFavorite) {
                     Icon(
-                        imageVector = if (isFavorite) Icons.Default.Favorite
-                        else Icons.Default.FavoriteBorder,
+                        imageVector = if (isFavorite) {
+                            Icons.Default.Favorite
+                        } else {
+                            Icons.Default.FavoriteBorder
+                        },
                         contentDescription = stringResource(
-                            if (isFavorite) R.string.favorite_remove
-                            else R.string.favorite_add
+                            if (isFavorite) {
+                                R.string.favorite_remove
+                            } else {
+                                R.string.favorite_add
+                            }
                         )
                     )
                 }
@@ -123,11 +129,11 @@ private fun AnimeDetailsContent(anime: Anime, modifier: Modifier = Modifier) {
 
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 anime.score?.let {
-                    InfoChip("★ ${"%.2f".format(it)}", Tone.Tertiary)   // matcha
+                    InfoChip("★ ${"%.2f".format(it)}", InfoChipTone.Tertiary) // matcha
                 }
-                anime.rank?.let { InfoChip("#${it}", Tone.Primary) }    // sakura
-                anime.type?.let { InfoChip(it, Tone.Secondary) }         // lavender
-                anime.year?.let { InfoChip("$it", Tone.Secondary) }      // lavender
+                anime.rank?.let { InfoChip("#$it", InfoChipTone.Primary) } // sakura
+                anime.type?.let { InfoChip(it, InfoChipTone.Secondary) } // lavender
+                anime.year?.let { InfoChip("$it", InfoChipTone.Secondary) } // lavender
             }
 
             if (anime.genres.isNotEmpty()) {

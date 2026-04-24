@@ -1,5 +1,6 @@
 package com.example.animewiki.data.repository
 
+import android.util.Log
 import androidx.paging.ExperimentalPagingApi
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
@@ -39,13 +40,15 @@ class AnimeRepository @Inject constructor(
         pagingData.map { it.toDomain() }
     }
 
+    // Cache-first: falls back to local DB if the network call fails for any reason.
+    @Suppress("TooGenericExceptionCaught")
     suspend fun getAnimeDetails(id: Int): Anime? {
-        // Cache-first
         val cached = db.animeDao().getById(id)?.toDomain()
         return try {
             api.getAnimeDetails(id).data?.toDomain() ?: cached
         } catch (e: Exception) {
-            cached  // offline: retorna o que tiver no cache
+            Log.w("AnimeRepository", "Failed to fetch details for id=$id, using cache", e)
+            cached
         }
     }
 
@@ -68,7 +71,10 @@ class AnimeRepository @Inject constructor(
         favoriteDao.observeIsFavorite(id)
 
     suspend fun toggleFavorite(anime: Anime, isCurrentlyFavorite: Boolean) {
-        if (isCurrentlyFavorite) favoriteDao.deleteById(anime.id)
-        else favoriteDao.insert(anime.toFavoriteEntity())
+        if (isCurrentlyFavorite) {
+            favoriteDao.deleteById(anime.id)
+        } else {
+            favoriteDao.insert(anime.toFavoriteEntity())
+        }
     }
 }

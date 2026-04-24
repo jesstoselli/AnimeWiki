@@ -30,8 +30,11 @@ class TopAnimeViewModel @Inject constructor(
         .debounce { q -> if (q.isBlank()) 0L else 400L }
         .distinctUntilChanged()
         .flatMapLatest { q ->
-            if (q.isBlank()) repository.topAnime()
-            else repository.searchAnime(q.trim())
+            if (q.isBlank()) {
+                repository.topAnime()
+            } else {
+                repository.searchAnime(q.trim())
+            }
         }
         .cachedIn(viewModelScope)
 

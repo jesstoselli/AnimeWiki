@@ -3,7 +3,6 @@ package com.example.animewiki.data.remote.dto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-
 @Serializable
 data class AnimeDetailsResponseDto(
     @SerialName("data") val data: AnimeDto? = null

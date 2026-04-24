@@ -16,19 +16,19 @@ private val SakuraLightColors = lightColorScheme(
     // Primary: Sakura profunda com container cor-de-cereja
     primary = SakuraRose,
     onPrimary = Color.White,
-    primaryContainer = SakuraPink,              // ← sua #F48FB1 original
+    primaryContainer = SakuraPink, // ← sua #F48FB1 original
     onPrimaryContainer = SakuraPinkDeep,
 
     // Secondary: ameixa profunda com container Lavender Mist
     secondary = LavenderPlum,
     onSecondary = Color.White,
-    secondaryContainer = LavenderMist,          // ← sua #CE93D8 original
+    secondaryContainer = LavenderMist, // ← sua #CE93D8 original
     onSecondaryContainer = LavenderDeep,
 
     // Tertiary: matcha escuro com container Matcha verde
     tertiary = MatchaDeepGreen,
     onTertiary = Color.White,
-    tertiaryContainer = MatchaGreen,            // ← sua #A5D6A7 original
+    tertiaryContainer = MatchaGreen, // ← sua #A5D6A7 original
     onTertiaryContainer = MatchaDeep,
 
     background = CreamShell,
@@ -56,7 +56,7 @@ private val SakuraLightColors = lightColorScheme(
 )
 
 private val SakuraDarkColors = darkColorScheme(
-    primary = SakuraPink,                       // no dark, a Sakura Pink volta a ser a base (fica lindona)
+    primary = SakuraPink, // no dark, a Sakura Pink volta a ser a base (fica lindona)
     onPrimary = Color(0xFF3B0016),
     primaryContainer = Color(0xFF6D2D48),
     onPrimaryContainer = Color(0xFFFFD9E2),
