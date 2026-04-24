@@ -1,0 +1,72 @@
+build:
+  maxIssues: 0
+  weights:
+    complexity: 2
+    LongParameterList: 1
+
+# Formatting rules from ktlint (requires detekt-formatting plugin)
+formatting:
+  active: true
+  android: true
+  autoCorrect: true
+  MaximumLineLength:
+    active: true
+    maxLineLength: 120
+  ArgumentListWrapping:
+    active: true
+    maxLineLength: 120
+  NoWildcardImports:
+    active: true
+    packagesToUseImportOnDemandProperty: ""
+
+# Complexity / size
+complexity:
+  LongMethod:
+    active: true
+    threshold: 80
+  LongParameterList:
+    active: true
+    functionThreshold: 8
+    constructorThreshold: 8
+    ignoreAnnotated: ['Composable']
+  TooManyFunctions:
+    active: false   # Compose files often have many private helpers
+
+# Style
+style:
+  MagicNumber:
+    active: false   # dp values, 2f/3f ratios etc. — too noisy in Compose
+  MaxLineLength:
+    active: true
+    maxLineLength: 120
+  UnusedPrivateMember:
+    active: true
+  ReturnCount:
+    active: true
+    max: 4          # our mediator's load() has several early returns
+  UnnecessaryAbstractClass:
+    active: false   # Room entities use abstract classes
+  ForbiddenComment:
+    active: false   # allow // TODO during development
+
+# Naming
+naming:
+  FunctionNaming:
+    active: true
+    ignoreAnnotated: ['Composable']   # Composables use PascalCase
+  TopLevelPropertyNaming:
+    active: true
+    constantPattern: '[A-Z][A-Za-z0-9]*'  # Color tokens: SakuraPink, not SAKURA_PINK
+  ObjectPropertyNaming:
+    active: true
+    constantPattern: '[A-Z][A-Za-z0-9_]*'
+
+# Compose-specific ignores
+empty-blocks:
+  EmptyFunctionBlock:
+    active: true
+    ignoreAnnotated: ['Composable']  # e.g., AssistChip(onClick = {})
+
+potential-bugs:
+  UnsafeCallOnNullableType:
+    active: true
