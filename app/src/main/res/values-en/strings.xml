@@ -50,4 +50,11 @@
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_notifications_label">Weekly top anime</string>
     <string name="settings_notifications_description">Get a notification every Monday with the #1 of the week</string>
+    <string name="settings_notifications_test">Test notification now</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_name">Weekly top anime</string>
+    <string name="notification_channel_description">Weekly alert with the #1 anime of the week</string>
+    <string name="notification_weekly_title">🌸 This week\'s #1</string>
+    <string name="notification_weekly_text">%1$s — scored %2$s</string>
 </resources>

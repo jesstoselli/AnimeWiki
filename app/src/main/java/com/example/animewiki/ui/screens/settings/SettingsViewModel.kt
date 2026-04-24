@@ -2,6 +2,7 @@ package com.example.animewiki.ui.screens.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.animewiki.data.notification.NotificationScheduler
 import com.example.animewiki.data.preferences.repository.UserPreferencesRepository
 import com.example.animewiki.domain.model.ThemeMode
 import com.example.animewiki.domain.model.UserPreferences
@@ -14,7 +15,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val repository: UserPreferencesRepository
+    private val repository: UserPreferencesRepository,
+    private val scheduler: NotificationScheduler
 ) : ViewModel() {
 
     val preferences: StateFlow<UserPreferences> = repository.preferences
@@ -29,6 +31,13 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun onNotificationsToggle(enabled: Boolean) {
-        viewModelScope.launch { repository.setNotificationsEnabled(enabled) }
+        viewModelScope.launch {
+            repository.setNotificationsEnabled(enabled)
+            if (enabled) scheduler.scheduleWeekly() else scheduler.cancel()
+        }
+    }
+
+    fun onTestNotification() {
+        scheduler.scheduleNowForTesting()
     }
 }

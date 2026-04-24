@@ -26,6 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.example.animewiki.R
 import com.example.animewiki.ui.screens.details.AnimeDetailsScreen
 import com.example.animewiki.ui.screens.favorites.FavoritesScreen
@@ -72,7 +73,10 @@ fun AnimeWikiNavHost() {
 
         composable(
             route = Routes.DETAILS,
-            arguments = listOf(navArgument("id") { type = NavType.IntType })
+            arguments = listOf(navArgument("id") { type = NavType.IntType }),
+            deepLinks = listOf(
+                navDeepLink { uriPattern = "animewiki://details/{id}" }
+            )
         ) {
             AnimeDetailsScreen(onBack = { rootNavController.popBackStack() })
         }

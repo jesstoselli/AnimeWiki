@@ -49,4 +49,11 @@
     <string name="settings_theme_dark">Escuro</string>
     <string name="settings_notifications_label">Top anime semanal</string>
     <string name="settings_notifications_description">Receba uma notificação com o #1 da semana toda segunda</string>
+    <string name="settings_notifications_test">Testar notificação agora</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_name">Top anime semanal</string>
+    <string name="notification_channel_description">Alerta semanal com o anime #1 da semana</string>
+    <string name="notification_weekly_title">🌸 Novo #1 da semana</string>
+    <string name="notification_weekly_text">%1$s — nota %2$s</string>
 </resources>

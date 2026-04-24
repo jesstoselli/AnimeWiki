@@ -14,9 +14,13 @@ lifecycle = "2.8.7"
 # Navigation
 navigationCompose = "2.8.5"
 
+# Work Manager
+workmanager = "2.10.0"
+
 # Hilt
 hilt = "2.56.2"
 hiltNavigationCompose = "1.2.0"
+hiltWork = "1.2.0"
 
 # Retrofit / OkHttp / Serialization
 retrofit = "2.11.0"
@@ -71,10 +75,15 @@ androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-
 # Navigation Compose
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 
+# Work Manager
+androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "workmanager" }
+
 # Hilt
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hilt" }
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+androidx-hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "hiltWork" }
+androidx-hilt-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "hiltWork" }
 
 # Retrofit + OkHttp + Kotlinx Serialization
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }

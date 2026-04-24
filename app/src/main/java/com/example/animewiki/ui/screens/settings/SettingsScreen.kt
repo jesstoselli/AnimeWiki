@@ -1,5 +1,9 @@
 package com.example.animewiki.ui.screens.settings
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +17,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -36,6 +41,18 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val prefs by viewModel.preferences.collectAsStateWithLifecycle()
+
+    // On Android 13+ we need to ask the user for POST_NOTIFICATIONS. If they
+    // deny, we roll back the preference so the toggle reflects reality.
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            viewModel.onNotificationsToggle(true)
+        } else {
+            viewModel.onNotificationsToggle(false)
+        }
+    }
 
     AnimeWikiScaffold(
         title = stringResource(R.string.settings_title),
@@ -63,8 +80,27 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_notifications_label),
                 description = stringResource(R.string.settings_notifications_description),
                 checked = prefs.notificationsEnabled,
-                onCheckedChange = viewModel::onNotificationsToggle
+                onCheckedChange = { wantEnabled ->
+                    if (wantEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        // Asks the user — callback sets the pref based on result
+                        notificationPermissionLauncher.launch(
+                            Manifest.permission.POST_NOTIFICATIONS
+                        )
+                    } else {
+                        viewModel.onNotificationsToggle(wantEnabled)
+                    }
+                }
             )
+
+            if (prefs.notificationsEnabled) {
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = viewModel::onTestNotification,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.settings_notifications_test))
+                }
+            }
         }
     }
 }
