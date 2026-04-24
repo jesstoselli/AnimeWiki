@@ -1,3 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name">AnimeWiki</string>
+
+    <!-- Common -->
+    <string name="action_back">Back</string>
+    <string name="action_retry">Try again</string>
+    <string name="action_clear_search">Clear search</string>
+    <string name="error_loading">Something went wrong</string>
+    <string name="error_loading_more">Couldn\'t load more: %1$s</string>
+    <string name="error_unknown">unknown error</string>
+
+    <!-- Top Anime screen -->
+    <string name="top_anime_title">Top Anime</string>
+    <string name="top_anime_settings">Settings</string>
+    <string name="search_placeholder">Search anime\u2026</string>
+    <string name="search_empty_title">No results for \"%1$s\"</string>
+    <string name="search_empty_message">Try a different search</string>
+
+    <!-- Offline banner -->
+    <string name="offline_banner">You\'re offline — showing saved items</string>
+
+    <!-- Favorites screen -->
+    <string name="favorites_title">Favorites</string>
+    <string name="favorites_empty_title">No favorites yet</string>
+    <string name="favorites_empty_message">Tap the heart on an anime\'s details page\nto start your collection</string>
+    <string name="favorite_add">Add to favorites</string>
+    <string name="favorite_remove">Remove from favorites</string>
+
+    <!-- Details screen -->
+    <string name="details_title">Details</string>
+    <string name="details_synopsis">Synopsis</string>
+    <string name="details_episodes">Episodes</string>
+    <string name="details_duration">Duration</string>
+    <string name="details_status">Status</string>
+    <string name="details_aired">Aired</string>
+    <string name="details_rating">Rating</string>
+    <string name="details_studio">Studio</string>
+
+    <!-- Bottom navigation -->
+    <string name="tab_top">Top</string>
+    <string name="tab_favorites">Favorites</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_notifications">Notifications</string>
+    <string name="settings_theme_system">Follow system</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_notifications_label">Weekly top anime</string>
+    <string name="settings_notifications_description">Get a notification every Monday with the #1 of the week</string>
 </resources>

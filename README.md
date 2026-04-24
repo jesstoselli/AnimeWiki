@@ -52,6 +52,7 @@ https://github.com/user-attachments/assets/25c90d25-fa4a-48b1-a2e5-d2a1e1d17fef
 - **Offline-first** cached content is shown instantly on cold start, with a discreet error banner when the network is unreachable
 - **Custom "Sakura Dream" Material 3 theme** with light/dark color schemes and the Quicksand typeface
 - **Favorites** with a dedicated tab, persisting through a reactive Room query
+- **Bilingual** (Portuguese and English) with automatic locale detection
 
 ---
 
@@ -228,6 +229,7 @@ The Jikan API requires no authentication or API key.
 - [x] Reactive search with debounce
 - [x] Pull-to-refresh
 - [x] Favorites screen (local CRUD)
+- [x] Internationalization (pt-BR default, en as secondary)
 - [ ] User preferences via DataStore (theme toggle)
 - [ ] Weekly top-anime push notification (WorkManager + Notifications)
 - [ ] Unit & integration tests
