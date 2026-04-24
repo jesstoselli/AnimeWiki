@@ -13,7 +13,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.animewiki.R
 
 @Composable
 internal fun DetailsScreenError(
@@ -29,11 +31,16 @@ internal fun DetailsScreenError(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Erro ao carregar", style = MaterialTheme.typography.titleMedium)
+            Text(
+                stringResource(R.string.error_loading),
+                style = MaterialTheme.typography.titleMedium
+            )
             Spacer(Modifier.height(8.dp))
             Text(errorMessage, style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(16.dp))
-            Button(onClick = { onClick() }) { Text("Tentar de novo") }
+            Button(onClick = { onClick() }) {
+                Text(stringResource(R.string.action_retry))
+            }
         }
     }
 }

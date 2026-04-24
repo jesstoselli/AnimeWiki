@@ -20,11 +20,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.animewiki.R
 import com.example.animewiki.domain.model.ThemeMode
 import com.example.animewiki.ui.components.AnimeWikiScaffold
 
@@ -36,7 +38,7 @@ fun SettingsScreen(
     val prefs by viewModel.preferences.collectAsStateWithLifecycle()
 
     AnimeWikiScaffold(
-        title = "Ajustes",
+        title = stringResource(R.string.settings_title),
         onBack = onBack
     ) { padding ->
         Column(
@@ -46,7 +48,7 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            SectionHeader("Aparência")
+            SectionHeader(stringResource(R.string.settings_section_appearance))
             ThemeSelector(
                 current = prefs.themeMode,
                 onSelect = viewModel::onThemeModeChange
@@ -56,10 +58,10 @@ fun SettingsScreen(
             HorizontalDivider()
             Spacer(Modifier.height(8.dp))
 
-            SectionHeader("Notificações")
+            SectionHeader(stringResource(R.string.settings_section_notifications))
             ToggleRow(
-                label = "Top anime semanal",
-                description = "Receba uma notificação com o #1 da semana toda segunda",
+                label = stringResource(R.string.settings_notifications_label),
+                description = stringResource(R.string.settings_notifications_description),
                 checked = prefs.notificationsEnabled,
                 onCheckedChange = viewModel::onNotificationsToggle
             )
@@ -84,9 +86,9 @@ private fun ThemeSelector(
     onSelect: (ThemeMode) -> Unit
 ) {
     val options = listOf(
-        ThemeMode.SYSTEM to "Seguir sistema",
-        ThemeMode.LIGHT to "Claro",
-        ThemeMode.DARK to "Escuro"
+        ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
+        ThemeMode.LIGHT to stringResource(R.string.settings_theme_light),
+        ThemeMode.DARK to stringResource(R.string.settings_theme_dark)
     )
     Column(Modifier.selectableGroup()) {
         options.forEach { (mode, label) ->
@@ -103,7 +105,7 @@ private fun ThemeSelector(
             ) {
                 RadioButton(
                     selected = (mode == current),
-                    onClick = null   // clique tratado no Row.selectable acima
+                    onClick = null
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(label, style = MaterialTheme.typography.bodyLarge)

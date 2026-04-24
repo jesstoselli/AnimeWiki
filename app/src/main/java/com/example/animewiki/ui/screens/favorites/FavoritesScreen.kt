@@ -13,10 +13,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.animewiki.R
 import com.example.animewiki.ui.components.AnimeWikiScaffold
 import com.example.animewiki.ui.screens.topAnime.components.AnimeCard
 
@@ -27,7 +29,7 @@ fun FavoritesScreen(
 ) {
     val favorites by viewModel.favorites.collectAsStateWithLifecycle()
 
-    AnimeWikiScaffold(title = "Favoritos") { padding ->
+    AnimeWikiScaffold(title = stringResource(R.string.favorites_title)) { padding ->
         if (favorites.isEmpty()) {
             EmptyFavoritesState(
                 modifier = Modifier.fillMaxSize().padding(padding)
@@ -66,13 +68,13 @@ private fun EmptyFavoritesState(modifier: Modifier = Modifier) {
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            "Nenhum favorito ainda",
+            stringResource(R.string.favorites_empty_title),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            "Toque no coração na tela de detalhes\npra começar sua coleção",
+            stringResource(R.string.favorites_empty_message),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

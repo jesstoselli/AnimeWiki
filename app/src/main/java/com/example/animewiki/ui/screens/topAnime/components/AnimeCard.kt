@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.example.animewiki.domain.model.Anime
+import com.example.animewiki.ui.theme.InkBrown
 import com.example.animewiki.ui.theme.SakuraPinkSoft
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,7 +28,8 @@ internal fun AnimeCard(anime: Anime, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(
-            containerColor = SakuraPinkSoft
+            containerColor = SakuraPinkSoft,
+            contentColor = InkBrown
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -46,8 +48,7 @@ internal fun AnimeCard(anime: Anime, onClick: () -> Unit) {
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
                     minLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
+                    overflow = TextOverflow.Ellipsis
                 )
                 anime.score?.let {
                     Spacer(Modifier.height(6.dp))

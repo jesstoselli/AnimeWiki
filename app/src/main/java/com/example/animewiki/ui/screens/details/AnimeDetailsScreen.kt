@@ -29,10 +29,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
+import com.example.animewiki.R
 import com.example.animewiki.domain.model.Anime
 import com.example.animewiki.ui.components.AnimeWikiScaffold
 import com.example.animewiki.ui.screens.details.components.DetailsScreenError
@@ -49,7 +51,8 @@ fun AnimeDetailsScreen(
     val state by viewModel.uiState.collectAsState()
     val isFavorite by viewModel.isFavorite.collectAsState()
 
-    val pageTitle = (state as? DetailsUiState.Success)?.anime?.title ?: "Detalhes"
+    val fallbackTitle = stringResource(R.string.details_title)
+    val pageTitle = (state as? DetailsUiState.Success)?.anime?.title ?: fallbackTitle
 
     AnimeWikiScaffold(
         title = pageTitle,
@@ -60,8 +63,10 @@ fun AnimeDetailsScreen(
                     Icon(
                         imageVector = if (isFavorite) Icons.Default.Favorite
                         else Icons.Default.FavoriteBorder,
-                        contentDescription = if (isFavorite) "Remover dos favoritos"
-                        else "Adicionar aos favoritos"
+                        contentDescription = stringResource(
+                            if (isFavorite) R.string.favorite_remove
+                            else R.string.favorite_add
+                        )
                     )
                 }
             }
@@ -146,7 +151,7 @@ private fun AnimeDetailsContent(anime: Anime, modifier: Modifier = Modifier) {
 
             anime.synopsis?.let {
                 Text(
-                    "Sinopse",
+                    stringResource(R.string.details_synopsis),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -155,12 +160,15 @@ private fun AnimeDetailsContent(anime: Anime, modifier: Modifier = Modifier) {
 
             HorizontalDivider()
 
-            InfoRow("Episódios", anime.episodes?.toString())
-            InfoRow("Duração", anime.duration)
-            InfoRow("Status", anime.status)
-            InfoRow("Exibição", anime.aired)
-            InfoRow("Classificação", anime.rating)
-            InfoRow("Estúdio", anime.studios.takeIf { it.isNotEmpty() }?.joinToString(", "))
+            InfoRow(stringResource(R.string.details_episodes), anime.episodes?.toString())
+            InfoRow(stringResource(R.string.details_duration), anime.duration)
+            InfoRow(stringResource(R.string.details_status), anime.status)
+            InfoRow(stringResource(R.string.details_aired), anime.aired)
+            InfoRow(stringResource(R.string.details_rating), anime.rating)
+            InfoRow(
+                stringResource(R.string.details_studio),
+                anime.studios.takeIf { it.isNotEmpty() }?.joinToString(", ")
+            )
         }
     }
 }

@@ -14,6 +14,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.example.animewiki.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +36,7 @@ fun AnimeWikiScaffold(
                         IconButton(onClick = onBack) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Voltar"
+                                contentDescription = stringResource(R.string.action_back)
                             )
                         }
                     }

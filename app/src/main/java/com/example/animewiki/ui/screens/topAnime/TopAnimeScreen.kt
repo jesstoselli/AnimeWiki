@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -33,6 +34,7 @@ import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import com.example.animewiki.R
 import com.example.animewiki.domain.model.Anime
 import com.example.animewiki.ui.components.AnimeWikiScaffold
 import com.example.animewiki.ui.screens.topAnime.components.AnimeCard
@@ -53,10 +55,13 @@ fun TopAnimeScreen(
     val query by viewModel.query.collectAsStateWithLifecycle()
 
     AnimeWikiScaffold(
-        title = "Top Anime",
+        title = stringResource(R.string.top_anime_title),
         actions = {
             IconButton(onClick = onSettingsClick) {
-                Icon(Icons.Default.Settings, contentDescription = "Ajustes")
+                Icon(
+                    Icons.Default.Settings,
+                    contentDescription = stringResource(R.string.top_anime_settings)
+                )
             }
         }
     ) { padding ->
@@ -147,6 +152,8 @@ internal fun TopAnimeContent(
             val appendError = items.loadState.append as? LoadState.Error
             if (appendError != null) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
+                    val unknown = stringResource(R.string.error_unknown)
+                    val detail = appendError.error.message ?: unknown
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -154,12 +161,14 @@ internal fun TopAnimeContent(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            "Erro ao carregar mais: ${appendError.error.message ?: "desconhecido"}",
+                            stringResource(R.string.error_loading_more, detail),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error
                         )
                         Spacer(Modifier.height(8.dp))
-                        Button(onClick = { items.retry() }) { Text("Tentar de novo") }
+                        Button(onClick = { items.retry() }) {
+                            Text(stringResource(R.string.action_retry))
+                        }
                     }
                 }
             }

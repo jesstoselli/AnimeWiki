@@ -15,7 +15,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.animewiki.R
 
 @Composable
 internal fun OfflineBanner(modifier: Modifier = Modifier) {
@@ -39,7 +41,7 @@ internal fun OfflineBanner(modifier: Modifier = Modifier) {
             )
             Spacer(Modifier.width(10.dp))
             Text(
-                "Você está offline — mostrando itens salvos",
+                stringResource(R.string.offline_banner),
                 style = MaterialTheme.typography.bodySmall
             )
         }

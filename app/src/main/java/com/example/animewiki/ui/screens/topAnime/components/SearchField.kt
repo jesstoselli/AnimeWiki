@@ -17,8 +17,10 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.animewiki.R
 
 @Composable
 fun SearchField(
@@ -30,14 +32,17 @@ fun SearchField(
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
-        placeholder = { Text("Buscar anime...") },
+        placeholder = { Text(stringResource(R.string.search_placeholder)) },
         leadingIcon = {
             Icon(Icons.Default.Search, contentDescription = null)
         },
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(onClick = onClear) {
-                    Icon(Icons.Default.Close, contentDescription = "Limpar busca")
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = stringResource(R.string.action_clear_search)
+                    )
                 }
             }
         },
@@ -69,12 +74,12 @@ fun EmptySearchState(
             modifier = Modifier.padding(bottom = 16.dp)
         )
         Text(
-            text = "Nada encontrado pra \"$query\"",
+            text = stringResource(R.string.search_empty_title, query),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
         Text(
-            text = "Tenta uma busca diferente",
+            text = stringResource(R.string.search_empty_message),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp)

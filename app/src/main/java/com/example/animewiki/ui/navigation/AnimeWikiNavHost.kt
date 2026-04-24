@@ -11,10 +11,12 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -24,6 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.animewiki.R
 import com.example.animewiki.ui.screens.details.AnimeDetailsScreen
 import com.example.animewiki.ui.screens.favorites.FavoritesScreen
 import com.example.animewiki.ui.screens.settings.SettingsScreen
@@ -43,13 +46,13 @@ object Tabs {
 
 private data class TabItem(
     val route: String,
-    val label: String,
+    @StringRes val labelRes: Int,
     val icon: ImageVector
 )
 
 private val tabs = listOf(
-    TabItem(Tabs.TOP, "Top", Icons.Default.Star),
-    TabItem(Tabs.FAVORITES, "Favoritos", Icons.Default.Favorite)
+    TabItem(Tabs.TOP, R.string.tab_top, Icons.Default.Star),
+    TabItem(Tabs.FAVORITES, R.string.tab_favorites, Icons.Default.Favorite)
 )
 
 @Composable
@@ -129,7 +132,7 @@ private fun MainBottomBar(navController: NavHostController) {
                     }
                 },
                 icon = { Icon(tab.icon, contentDescription = null) },
-                label = { Text(tab.label) },
+                label = { Text(stringResource(tab.labelRes)) },
                 colors = NavigationBarItemDefaults.colors()
             )
         }
