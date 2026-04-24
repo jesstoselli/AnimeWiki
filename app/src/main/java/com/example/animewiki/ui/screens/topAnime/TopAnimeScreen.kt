@@ -12,9 +12,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -42,12 +46,20 @@ import com.example.animewiki.ui.screens.topAnime.components.SkeletonGrid
 @Composable
 fun TopAnimeScreen(
     onAnimeClick: (Int) -> Unit,
+    onSettingsClick: () -> Unit,
     viewModel: TopAnimeViewModel = hiltViewModel()
 ) {
     val items = viewModel.animeList.collectAsLazyPagingItems()
     val query by viewModel.query.collectAsStateWithLifecycle()
 
-    AnimeWikiScaffold(title = "Top Anime") { padding ->
+    AnimeWikiScaffold(
+        title = "Top Anime",
+        actions = {
+            IconButton(onClick = onSettingsClick) {
+                Icon(Icons.Default.Settings, contentDescription = "Ajustes")
+            }
+        }
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()

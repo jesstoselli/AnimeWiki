@@ -26,16 +26,16 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.animewiki.ui.screens.details.AnimeDetailsScreen
 import com.example.animewiki.ui.screens.favorites.FavoritesScreen
+import com.example.animewiki.ui.screens.settings.SettingsScreen
 import com.example.animewiki.ui.screens.topAnime.TopAnimeScreen
 
-// Grafo de nível mais alto
 object Routes {
     const val MAIN = "main"
     const val DETAILS = "details/{id}"
+    const val SETTINGS = "settings"
     fun details(id: Int) = "details/$id"
 }
 
-// Grafo interno das abas
 object Tabs {
     const val TOP = "top"
     const val FAVORITES = "favorites"
@@ -62,7 +62,8 @@ fun AnimeWikiNavHost() {
     ) {
         composable(Routes.MAIN) {
             MainTabs(
-                onAnimeClick = { id -> rootNavController.navigate(Routes.details(id)) }
+                onAnimeClick = { id -> rootNavController.navigate(Routes.details(id)) },
+                onSettingsClick = { rootNavController.navigate(Routes.SETTINGS) }
             )
         }
 
@@ -72,11 +73,18 @@ fun AnimeWikiNavHost() {
         ) {
             AnimeDetailsScreen(onBack = { rootNavController.popBackStack() })
         }
+
+        composable(Routes.SETTINGS) {                                                // 👈 novo
+            SettingsScreen(onBack = { rootNavController.popBackStack() })
+        }
     }
 }
 
 @Composable
-private fun MainTabs(onAnimeClick: (Int) -> Unit) {
+private fun MainTabs(
+    onAnimeClick: (Int) -> Unit,
+    onSettingsClick: () -> Unit
+) {
     val tabNavController = rememberNavController()
 
     Scaffold(
@@ -89,7 +97,10 @@ private fun MainTabs(onAnimeClick: (Int) -> Unit) {
             modifier = Modifier.padding(padding)
         ) {
             composable(Tabs.TOP) {
-                TopAnimeScreen(onAnimeClick = onAnimeClick)
+                TopAnimeScreen(
+                    onAnimeClick = onAnimeClick,
+                    onSettingsClick = onSettingsClick
+                )
             }
             composable(Tabs.FAVORITES) {
                 FavoritesScreen(onAnimeClick = onAnimeClick)

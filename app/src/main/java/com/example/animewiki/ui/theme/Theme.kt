@@ -1,6 +1,5 @@
 package com.example.animewiki.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -11,6 +10,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.example.animewiki.domain.model.ThemeMode
 
 private val SakuraLightColors = lightColorScheme(
     // Primary: Sakura profunda com container cor-de-cereja
@@ -97,17 +97,22 @@ private val SakuraDarkColors = darkColorScheme(
 
 @Composable
 fun AnimeWikiTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Sakura Dream tem personalidade — vamos ignorar o Material You dinâmico
-    // pra manter a identidade visual consistente
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
+    val darkTheme = when (themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val ctx = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
         }
+
         darkTheme -> SakuraDarkColors
         else -> SakuraLightColors
     }
