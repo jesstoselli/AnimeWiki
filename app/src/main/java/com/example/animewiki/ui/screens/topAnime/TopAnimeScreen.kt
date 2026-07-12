@@ -36,11 +36,13 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.example.animewiki.R
 import com.example.animewiki.domain.model.Anime
+import com.example.animewiki.ui.common.LoadErrorType
+import com.example.animewiki.ui.common.toLoadErrorType
 import com.example.animewiki.ui.components.AnimeWikiScaffold
 import com.example.animewiki.ui.screens.topAnime.components.AnimeCard
 import com.example.animewiki.ui.screens.topAnime.components.EmptySearchState
 import com.example.animewiki.ui.screens.topAnime.components.FullScreenError
-import com.example.animewiki.ui.screens.topAnime.components.OfflineBanner
+import com.example.animewiki.ui.screens.topAnime.components.LoadErrorBanner
 import com.example.animewiki.ui.screens.topAnime.components.SearchField
 import com.example.animewiki.ui.screens.topAnime.components.SkeletonGrid
 
@@ -88,10 +90,17 @@ fun TopAnimeScreen(
                         modifier = Modifier.fillMaxSize()
                     )
 
-                    isEmpty && refreshState is LoadState.Error -> FullScreenError(
-                        message = refreshState.error.message ?: "Tente novamente",
-                        onRetry = { items.retry() }
-                    )
+                    isEmpty && refreshState is LoadState.Error -> {
+                        val errorType = refreshState.error.toLoadErrorType()
+                        val message = when (errorType) {
+                            LoadErrorType.NO_CONNECTION -> stringResource(R.string.error_no_connection)
+                            LoadErrorType.SERVER -> stringResource(R.string.error_server)
+                        }
+                        FullScreenError(
+                            message = message,
+                            onRetry = { items.retry() }
+                        )
+                    }
 
                     isEmpty && refreshState is LoadState.NotLoading && query.isNotBlank() ->
                         EmptySearchState(query = query)
@@ -100,7 +109,10 @@ fun TopAnimeScreen(
                 }
 
                 if (refreshState is LoadState.Error && !isEmpty) {
-                    OfflineBanner(modifier = Modifier.align(Alignment.TopCenter))
+                    LoadErrorBanner(
+                        type = refreshState.error.toLoadErrorType(),
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
                 }
             }
         }

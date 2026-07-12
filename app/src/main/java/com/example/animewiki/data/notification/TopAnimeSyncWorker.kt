@@ -16,15 +16,17 @@ class TopAnimeSyncWorker @AssistedInject constructor(
     private val notificationHelper: NotificationHelper
 ) : CoroutineWorker(context, params) {
 
-    @Suppress("TooGenericExceptionCaught")
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
     override suspend fun doWork(): Result {
         return try {
             val response = api.getTopAnime(page = 1, limit = 1)
             val top = response.data?.firstOrNull() ?: return Result.retry()
 
-            val title = top.titleEnglish?.takeIf { it.isNotBlank() } ?: top.title
+            val title = top.titleEnglish?.takeIf { it.isNotBlank() }
+                ?: top.title
+                ?: return Result.retry()
             val score = top.score?.let { "%.2f".format(it) } ?: "—"
-            val id = top.malId
+            val id = top.malId ?: return Result.retry()
 
             notificationHelper.showWeeklyTopAnime(
                 animeId = id,

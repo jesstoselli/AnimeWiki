@@ -4,7 +4,6 @@ import com.example.animewiki.data.local.AppDatabase
 import com.example.animewiki.data.local.dao.AnimeDao
 import com.example.animewiki.data.local.dao.FavoriteDao
 import com.example.animewiki.data.local.entity.AnimeEntity
-import com.example.animewiki.data.local.entity.FavoriteEntity
 import com.example.animewiki.data.remote.JikanApi
 import com.example.animewiki.data.remote.dto.AnimeDetailsResponseDto
 import com.example.animewiki.data.remote.dto.AnimeDto

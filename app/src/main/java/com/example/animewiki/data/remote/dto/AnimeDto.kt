@@ -5,28 +5,28 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class AnimeListResponseDto(
-    val pagination: PaginationDto,
-    val data: List<AnimeDto>
+    val pagination: PaginationDto? = null,
+    val data: List<AnimeDto>? = null
 )
 
 @Serializable
 data class PaginationDto(
-    @SerialName("last_visible_page") val lastVisiblePage: Int,
-    @SerialName("has_next_page") val hasNextPage: Boolean,
-    @SerialName("current_page") val currentPage: Int
+    @SerialName("last_visible_page") val lastVisiblePage: Int? = null,
+    @SerialName("has_next_page") val hasNextPage: Boolean = false,
+    @SerialName("current_page") val currentPage: Int? = null
 )
 
 @Serializable
 data class AnimeDto(
-    @SerialName("mal_id") val malId: Int,
-    val title: String,
+    @SerialName("mal_id") val malId: Int? = null,
+    val title: String? = null,
     @SerialName("title_english") val titleEnglish: String? = null,
-    @SerialName("title_Japanese") val titleJapanese: String? = null,
+    @SerialName("title_japanese") val titleJapanese: String? = null,
     val type: String? = null,
     val episodes: Int? = null,
     val score: Double? = null,
     val year: Int? = null,
-    val images: AnimeImagesDto,
+    val images: AnimeImagesDto? = null,
     val synopsis: String? = null,
     val genres: List<NamedEntityDto>? = null,
     val studios: List<NamedEntityDto>? = null,
@@ -42,12 +42,12 @@ data class AnimeDto(
 
 @Serializable
 data class AnimeImagesDto(
-    val jpg: AnimeImageUrlsDto
+    val jpg: AnimeImageUrlsDto? = null
 )
 
 @Serializable
 data class AnimeImageUrlsDto(
-    @SerialName("image_url") val imageUrl: String,
+    @SerialName("image_url") val imageUrl: String? = null,
     @SerialName("small_image_url") val smallImageUrl: String? = null,
     @SerialName("large_image_url") val largeImageUrl: String? = null
 )

@@ -8,6 +8,8 @@
     <string name="error_loading">Erro ao carregar</string>
     <string name="error_loading_more">Erro ao carregar mais: %1$s</string>
     <string name="error_unknown">desconhecido</string>
+    <string name="error_no_connection">Sem conexão. Verifique sua internet e tente de novo.</string>
+    <string name="error_server">O servidor está com problemas. Tente de novo em instantes.</string>
 
     <!-- Top Anime screen -->
     <string name="top_anime_title">Top Anime</string>
@@ -16,8 +18,9 @@
     <string name="search_empty_title">Nada encontrado pra \"%1$s\"</string>
     <string name="search_empty_message">Tenta uma busca diferente</string>
 
-    <!-- Offline banner -->
+    <!-- Load error banners -->
     <string name="offline_banner">Você está offline — mostrando itens salvos</string>
+    <string name="server_error_banner">Problema no servidor — mostrando itens salvos</string>
 
     <!-- Favorites screen -->
     <string name="favorites_title">Favoritos</string>

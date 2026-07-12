@@ -34,7 +34,7 @@ class NotificationScheduler @Inject constructor(
 
         workManager.enqueueUniquePeriodicWork(
             WORK_NAME,
-            ExistingPeriodicWorkPolicy.KEEP,   // se já tiver, mantém — não reagenda
+            ExistingPeriodicWorkPolicy.KEEP, // se já tiver, mantém — não reagenda
             request
         )
     }

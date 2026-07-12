@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -18,9 +19,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.animewiki.R
+import com.example.animewiki.ui.common.LoadErrorType
 
 @Composable
-internal fun OfflineBanner(modifier: Modifier = Modifier) {
+internal fun LoadErrorBanner(type: LoadErrorType, modifier: Modifier = Modifier) {
+    val (icon, text) = when (type) {
+        LoadErrorType.NO_CONNECTION ->
+            Icons.Default.CloudOff to stringResource(R.string.offline_banner)
+        LoadErrorType.SERVER ->
+            Icons.Default.ErrorOutline to stringResource(R.string.server_error_banner)
+    }
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -35,15 +44,12 @@ internal fun OfflineBanner(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.CloudOff,
+                imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp)
             )
             Spacer(Modifier.width(10.dp))
-            Text(
-                stringResource(R.string.offline_banner),
-                style = MaterialTheme.typography.bodySmall
-            )
+            Text(text, style = MaterialTheme.typography.bodySmall)
         }
     }
 }

@@ -5,8 +5,8 @@ import com.example.animewiki.data.remote.dto.AnimeDto
 import com.example.animewiki.domain.model.Anime
 
 fun AnimeDto.toEntity(pageIndex: Int): AnimeEntity? {
-    val id = malId
-    val title = title
+    val id = malId ?: return null
+    val title = title ?: return null
     val imageUrl = images?.jpg?.largeImageUrl
         ?: images?.jpg?.imageUrl
         ?: return null

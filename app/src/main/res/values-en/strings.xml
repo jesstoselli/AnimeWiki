@@ -9,6 +9,8 @@
     <string name="error_loading">Something went wrong</string>
     <string name="error_loading_more">Couldn\'t load more: %1$s</string>
     <string name="error_unknown">unknown error</string>
+    <string name="error_no_connection">No connection. Check your internet and try again.</string>
+    <string name="error_server">The server is having trouble. Try again in a moment.</string>
 
     <!-- Top Anime screen -->
     <string name="top_anime_title">Top Anime</string>
@@ -17,8 +19,9 @@
     <string name="search_empty_title">No results for \"%1$s\"</string>
     <string name="search_empty_message">Try a different search</string>
 
-    <!-- Offline banner -->
+    <!-- Load error banners -->
     <string name="offline_banner">You\'re offline — showing saved items</string>
+    <string name="server_error_banner">Server problem — showing saved items</string>
 
     <!-- Favorites screen -->
     <string name="favorites_title">Favorites</string>
