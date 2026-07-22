@@ -1,6 +1,6 @@
 package com.example.animewiki.domain.model
 
-data class AnimeBrowseCriteria private constructor(
+class AnimeBrowseCriteria private constructor(
     val query: String,
     val filters: AnimeFilters
 ) {
@@ -16,4 +16,13 @@ data class AnimeBrowseCriteria private constructor(
             filters = filters
         )
     }
+
+    override fun equals(other: Any?): Boolean =
+        this === other || other is AnimeBrowseCriteria &&
+            query == other.query && filters == other.filters
+
+    override fun hashCode(): Int = 31 * query.hashCode() + filters.hashCode()
+
+    override fun toString(): String =
+        "AnimeBrowseCriteria(query=$query, filters=$filters)"
 }
