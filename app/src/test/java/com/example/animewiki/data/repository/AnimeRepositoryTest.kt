@@ -7,6 +7,8 @@ import com.example.animewiki.data.local.entity.AnimeEntity
 import com.example.animewiki.data.remote.JikanApi
 import com.example.animewiki.data.remote.dto.AnimeDetailsResponseDto
 import com.example.animewiki.data.remote.dto.AnimeDto
+import com.example.animewiki.data.remote.dto.AnimeGenreDto
+import com.example.animewiki.data.remote.dto.AnimeGenreListResponseDto
 import com.example.animewiki.data.remote.dto.AnimeImageUrlsDto
 import com.example.animewiki.data.remote.dto.AnimeImagesDto
 import com.example.animewiki.domain.model.Anime
@@ -77,6 +79,31 @@ class AnimeRepositoryTest {
         val result = repository.getAnimeDetails(52991)
 
         assertEquals("Sousou no Frieren", result?.title) // network title, not cached
+    }
+
+    @Test
+    fun `getAnimeGenres maps sorts and caches valid genres`() = runTest {
+        coEvery { api.getAnimeGenres() } returns AnimeGenreListResponseDto(
+            data = listOf(
+                AnimeGenreDto(malId = 2, name = "Adventure", count = 20),
+                AnimeGenreDto(malId = null, name = "Invalid"),
+                AnimeGenreDto(malId = 1, name = "Action", count = 30)
+            )
+        )
+
+        val first = repository.getAnimeGenres()
+        val second = repository.getAnimeGenres()
+
+        assertEquals(listOf("Action", "Adventure"), first.map { it.name })
+        assertEquals(first, second)
+        coVerify(exactly = 1) { api.getAnimeGenres() }
+    }
+
+    @Test(expected = IllegalStateException::class)
+    fun `empty genre response is not accepted as a valid catalog`() = runTest {
+        coEvery { api.getAnimeGenres() } returns AnimeGenreListResponseDto(data = emptyList())
+
+        repository.getAnimeGenres()
     }
 
     // --- helpers ---
