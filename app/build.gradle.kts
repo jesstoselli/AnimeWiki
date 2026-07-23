@@ -139,12 +139,14 @@ dependencies {
     testImplementation(libs.mockk)
 
     // Instrumented tests (on device)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.mockk.android)
     androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 
     // Debug
     debugImplementation(libs.androidx.compose.ui.tooling)

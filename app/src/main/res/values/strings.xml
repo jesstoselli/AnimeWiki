@@ -18,6 +18,33 @@
     <string name="search_empty_title">Nada encontrado pra \"%1$s\"</string>
     <string name="search_empty_message">Tenta uma busca diferente</string>
 
+    <!-- Discovery filters -->
+    <string name="discover_title">Descobrir</string>
+    <string name="tab_discover">Descobrir</string>
+    <string name="filters_open">Filtros</string>
+    <string name="filters_title">Filtrar animes</string>
+    <string name="filters_format">Formato</string>
+    <string name="filters_rating">Classificação etária</string>
+    <string name="filters_genres">Gêneros</string>
+    <string name="filters_apply">Aplicar</string>
+    <string name="filters_clear">Limpar tudo</string>
+    <string name="filters_retry_genres">Tentar carregar gêneros novamente</string>
+    <string name="filters_genres_error">Não foi possível carregar os gêneros.</string>
+    <string name="filters_active_count">%1$d filtros ativos</string>
+    <string name="filters_remove">Remover filtro %1$s</string>
+    <string name="filter_format_tv">TV</string>
+    <string name="filter_format_movie">Filme</string>
+    <string name="filter_format_ova">OVA</string>
+    <string name="filter_format_ona">ONA</string>
+    <string name="filter_format_special">Especial</string>
+    <string name="filter_format_music">Música</string>
+    <string name="filter_rating_g">Livre</string>
+    <string name="filter_rating_pg">Infantil</string>
+    <string name="filter_rating_pg13">13+</string>
+    <string name="filter_rating_r17">17+</string>
+    <string name="filter_rating_r_plus">R+</string>
+    <string name="filter_rating_rx">Adulto</string>
+
     <!-- Load error banners -->
     <string name="offline_banner">Você está offline — mostrando itens salvos</string>
     <string name="server_error_banner">Problema no servidor — mostrando itens salvos</string>
