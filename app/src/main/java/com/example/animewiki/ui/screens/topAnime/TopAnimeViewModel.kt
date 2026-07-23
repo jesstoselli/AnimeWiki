@@ -6,6 +6,7 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.example.animewiki.data.repository.AnimeRepository
 import com.example.animewiki.domain.model.Anime
+import com.example.animewiki.domain.model.AnimeBrowseCriteria
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -33,7 +34,7 @@ class TopAnimeViewModel @Inject constructor(
             if (q.isBlank()) {
                 repository.topAnime()
             } else {
-                repository.searchAnime(q.trim())
+                repository.searchAnime(AnimeBrowseCriteria.create(q))
             }
         }
         .cachedIn(viewModelScope)

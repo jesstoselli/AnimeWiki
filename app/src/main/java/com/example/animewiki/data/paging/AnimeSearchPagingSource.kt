@@ -5,11 +5,12 @@ import androidx.paging.PagingState
 import com.example.animewiki.data.mapper.toDomain
 import com.example.animewiki.data.remote.JikanApi
 import com.example.animewiki.domain.model.Anime
+import com.example.animewiki.domain.model.AnimeBrowseCriteria
 import kotlinx.coroutines.delay
 
 class AnimeSearchPagingSource(
     private val api: JikanApi,
-    private val query: String
+    private val criteria: AnimeBrowseCriteria
 ) : PagingSource<Int, Anime>() {
 
     override fun getRefreshKey(state: PagingState<Int, Anime>): Int? {
@@ -27,10 +28,14 @@ class AnimeSearchPagingSource(
         return try {
             if (page > 1) delay(400) // rate-limit polite
 
+            val filters = criteria.filters
             val response = api.searchAnime(
-                query = query,
+                query = criteria.query.ifBlank { null },
                 page = page,
-                limit = params.loadSize.coerceAtMost(25)
+                limit = params.loadSize.coerceAtMost(25),
+                type = filters.format?.apiValue,
+                rating = filters.rating?.apiValue,
+                genres = filters.genresQuery
             )
             val items = response.data.orEmpty().mapNotNull { it.toDomain() }
             val hasNext = response.pagination?.hasNextPage == true

@@ -15,6 +15,7 @@ import com.example.animewiki.data.paging.AnimeSearchPagingSource
 import com.example.animewiki.data.paging.TopAnimeRemoteMediator
 import com.example.animewiki.data.remote.JikanApi
 import com.example.animewiki.domain.model.Anime
+import com.example.animewiki.domain.model.AnimeBrowseCriteria
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -52,13 +53,13 @@ class AnimeRepository @Inject constructor(
         }
     }
 
-    fun searchAnime(query: String): Flow<PagingData<Anime>> = Pager(
+    fun searchAnime(criteria: AnimeBrowseCriteria): Flow<PagingData<Anime>> = Pager(
         config = PagingConfig(
             pageSize = 25,
             prefetchDistance = 10,
             enablePlaceholders = false
         ),
-        pagingSourceFactory = { AnimeSearchPagingSource(api, query) }
+        pagingSourceFactory = { AnimeSearchPagingSource(api, criteria) }
     ).flow.map { pagingData ->
         val seenIds = mutableSetOf<Int>()
         pagingData.filter { anime -> seenIds.add(anime.id) }

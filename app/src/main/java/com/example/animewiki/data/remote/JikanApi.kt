@@ -23,9 +23,12 @@ interface JikanApi {
 
     @GET("anime")
     suspend fun searchAnime(
-        @Query(QUERY) query: String,
+        @Query(QUERY) query: String? = null,
         @Query(PAGE) page: Int = 1,
         @Query(LIMIT) limit: Int = 25,
+        @Query(TYPE) type: String? = null,
+        @Query(RATING) rating: String? = null,
+        @Query(GENRES) genres: String? = null,
         @Query(ORDER_BY) orderBy: String = POPULARITY,
         @Query(SORT) sort: String = ASCENDING
     ): AnimeListResponseDto
@@ -38,6 +41,9 @@ interface JikanApi {
         const val PAGE = "page"
         const val ID = "id"
         const val QUERY = "q"
+        const val TYPE = "type"
+        const val RATING = "rating"
+        const val GENRES = "genres"
         const val ORDER_BY = "order_by"
         const val SORT = "sort"
     }
