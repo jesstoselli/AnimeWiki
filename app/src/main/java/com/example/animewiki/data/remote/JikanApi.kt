@@ -1,6 +1,7 @@
 package com.example.animewiki.data.remote
 
 import com.example.animewiki.data.remote.dto.AnimeDetailsResponseDto
+import com.example.animewiki.data.remote.dto.AnimeGenreListResponseDto
 import com.example.animewiki.data.remote.dto.AnimeListResponseDto
 import retrofit2.http.GET
 import retrofit2.http.Path
@@ -16,6 +17,9 @@ interface JikanApi {
 
     @GET("anime/{id}/full")
     suspend fun getAnimeDetails(@Path(ID) id: Int): AnimeDetailsResponseDto
+
+    @GET("genres/anime")
+    suspend fun getAnimeGenres(): AnimeGenreListResponseDto
 
     @GET("anime")
     suspend fun searchAnime(
