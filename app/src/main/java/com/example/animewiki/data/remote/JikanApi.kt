@@ -22,6 +22,7 @@ interface JikanApi {
     suspend fun getAnimeGenres(): AnimeGenreListResponseDto
 
     @GET("anime")
+    @Suppress("LongParameterList")
     suspend fun searchAnime(
         @Query(QUERY) query: String? = null,
         @Query(PAGE) page: Int = 1,

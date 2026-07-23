@@ -75,6 +75,7 @@ class AnimeRepository @Inject constructor(
         pagingData.filter { anime -> seenIds.add(anime.id) }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     suspend fun getAnimeGenres(forceRefresh: Boolean = false): List<AnimeGenre> {
         val (refresh, ownsRefresh) = genreCacheMutex.withLock {
             if (!forceRefresh) cachedGenres?.let { return it.toList() }
