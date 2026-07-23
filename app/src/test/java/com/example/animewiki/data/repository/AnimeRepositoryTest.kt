@@ -24,6 +24,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import java.io.IOException
@@ -131,6 +132,116 @@ class AnimeRepositoryTest {
             )
             coVerify(exactly = 1) { api.getAnimeGenres() }
         }
+    }
+
+    @Test
+    fun `concurrent forced refreshes share one new remote request`() = runTest {
+        withTimeout(1_000) {
+            coEvery { api.getAnimeGenres() } returns AnimeGenreListResponseDto(
+                data = listOf(AnimeGenreDto(malId = 1, name = "Cached", count = 10))
+            )
+            repository.getAnimeGenres()
+
+            val refreshStarted = CompletableDeferred<Unit>()
+            val releaseRefresh = CompletableDeferred<Unit>()
+            var refreshCalls = 0
+            coEvery { api.getAnimeGenres() } coAnswers {
+                refreshCalls += 1
+                refreshStarted.complete(Unit)
+                releaseRefresh.await()
+                AnimeGenreListResponseDto(
+                    data = listOf(AnimeGenreDto(malId = 2, name = "Refreshed", count = 20))
+                )
+            }
+
+            val first = async(start = CoroutineStart.UNDISPATCHED) {
+                repository.getAnimeGenres(forceRefresh = true)
+            }
+            refreshStarted.await()
+            val second = async(start = CoroutineStart.UNDISPATCHED) {
+                repository.getAnimeGenres(forceRefresh = true)
+            }
+
+            assertEquals(1, refreshCalls)
+            releaseRefresh.complete(Unit)
+
+            assertEquals(
+                listOf(listOf("Refreshed"), listOf("Refreshed")),
+                awaitAll(first, second).map { genres -> genres.map { it.name } }
+            )
+            assertEquals(1, refreshCalls)
+            coVerify(exactly = 2) { api.getAnimeGenres() }
+        }
+    }
+
+    @Test
+    fun `forced refresh after a completed refresh starts another remote request`() = runTest {
+        coEvery { api.getAnimeGenres() } returnsMany listOf(
+            AnimeGenreListResponseDto(
+                data = listOf(AnimeGenreDto(malId = 1, name = "Cached", count = 10))
+            ),
+            AnimeGenreListResponseDto(
+                data = listOf(AnimeGenreDto(malId = 2, name = "First refresh", count = 20))
+            ),
+            AnimeGenreListResponseDto(
+                data = listOf(AnimeGenreDto(malId = 3, name = "Second refresh", count = 30))
+            )
+        )
+        repository.getAnimeGenres()
+
+        val first = repository.getAnimeGenres(forceRefresh = true)
+        val second = repository.getAnimeGenres(forceRefresh = true)
+
+        assertEquals(listOf("First refresh"), first.map { it.name })
+        assertEquals(listOf("Second refresh"), second.map { it.name })
+        coVerify(exactly = 3) { api.getAnimeGenres() }
+    }
+
+    @Test
+    fun `empty forced refresh preserves a valid cached catalog`() = runTest {
+        coEvery { api.getAnimeGenres() } returnsMany listOf(
+            AnimeGenreListResponseDto(
+                data = listOf(AnimeGenreDto(malId = 1, name = "Cached", count = 10))
+            ),
+            AnimeGenreListResponseDto(data = emptyList())
+        )
+        repository.getAnimeGenres()
+
+        try {
+            repository.getAnimeGenres(forceRefresh = true)
+            fail("Expected an empty forced refresh to fail")
+        } catch (_: IllegalStateException) {
+            // Expected: the previous valid snapshot must remain cached.
+        }
+
+        assertEquals(listOf("Cached"), repository.getAnimeGenres().map { it.name })
+        coVerify(exactly = 2) { api.getAnimeGenres() }
+    }
+
+    @Test
+    fun `failed forced refresh preserves a valid cached catalog`() = runTest {
+        var remoteCalls = 0
+        coEvery { api.getAnimeGenres() } coAnswers {
+            remoteCalls += 1
+            if (remoteCalls == 1) {
+                AnimeGenreListResponseDto(
+                    data = listOf(AnimeGenreDto(malId = 1, name = "Cached", count = 10))
+                )
+            } else {
+                throw IOException("offline")
+            }
+        }
+        repository.getAnimeGenres()
+
+        try {
+            repository.getAnimeGenres(forceRefresh = true)
+            fail("Expected a failed forced refresh to propagate")
+        } catch (_: IOException) {
+            // Expected: the previous valid snapshot must remain cached.
+        }
+
+        assertEquals(listOf("Cached"), repository.getAnimeGenres().map { it.name })
+        coVerify(exactly = 2) { api.getAnimeGenres() }
     }
 
     @Test
