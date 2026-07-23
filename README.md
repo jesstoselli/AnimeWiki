@@ -46,6 +46,7 @@ https://github.com/user-attachments/assets/25c90d25-fa4a-48b1-a2e5-d2a1e1d17fef
 ## ✨ Features
 
 - **Top anime grid** with infinite scroll via Paging 3 + RemoteMediator
+- **Discover filters** for format, age rating, and multiple genres, combinable with the text query
 - **Rich details screen** with synopsis, genres, studios, airing info, and score
 - **Reactive search** that debounces user input and swaps data sources on the fly
 - **Pull-to-refresh** on the main grid
@@ -123,6 +124,17 @@ Layered, single-module, MVVM with a unidirectional data flow.
 - **Favorites live in their own Room table** — a separate, reactive `Flow<List<Anime>>` so the cache layer can be invalidated without losing user data.
 - **DataStore** holds user preferences (theme mode, notification opt-in) and is observed at app boot to drive `AnimeWikiTheme` reactively.
 - **WorkManager** runs `TopAnimeSyncWorker` on a 7-day schedule, gated by `NetworkType.CONNECTED`. The Worker is `@HiltWorker`-annotated so it gets the same `JikanApi` and dependencies as the rest of the app.
+
+### Discover filters
+
+The former Top tab is now Discover. Its default ranking remains Room-backed and
+offline-first. Format, age-rating, and multi-genre filters can be combined with
+the text query; these filtered/search feeds are network-backed in R1. Genre
+metadata is cached for the lifetime of the app process.
+
+Jikan depends on MyAnimeList and may return upstream 5xx/504 responses. Anime
+Wiki reports those as server problems; they do not imply that a selected filter
+is invalid.
 
 ---
 
