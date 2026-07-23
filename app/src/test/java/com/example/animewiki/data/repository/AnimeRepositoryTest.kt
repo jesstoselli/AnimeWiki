@@ -12,11 +12,17 @@ import com.example.animewiki.data.remote.dto.AnimeGenreListResponseDto
 import com.example.animewiki.data.remote.dto.AnimeImageUrlsDto
 import com.example.animewiki.data.remote.dto.AnimeImagesDto
 import com.example.animewiki.domain.model.Anime
+import com.example.animewiki.domain.model.AnimeGenre
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -96,6 +102,50 @@ class AnimeRepositoryTest {
 
         assertEquals(listOf("Action", "Adventure"), first.map { it.name })
         assertEquals(first, second)
+        coVerify(exactly = 1) { api.getAnimeGenres() }
+    }
+
+    @Test
+    fun `concurrent genre cache misses share one remote request`() = runTest {
+        withTimeout(1_000) {
+            val releaseRemoteCall = CompletableDeferred<Unit>()
+            var remoteCalls = 0
+            coEvery { api.getAnimeGenres() } coAnswers {
+                remoteCalls += 1
+                releaseRemoteCall.await()
+                AnimeGenreListResponseDto(
+                    data = listOf(AnimeGenreDto(malId = 1, name = "Action", count = 30))
+                )
+            }
+
+            val requests = List(10) {
+                async(start = CoroutineStart.UNDISPATCHED) { repository.getAnimeGenres() }
+            }
+
+            assertEquals(1, remoteCalls)
+            releaseRemoteCall.complete(Unit)
+
+            assertEquals(
+                List(10) { listOf("Action") },
+                requests.awaitAll().map { it.map { genre -> genre.name } }
+            )
+            coVerify(exactly = 1) { api.getAnimeGenres() }
+        }
+    }
+
+    @Test
+    fun `mutating returned genres does not corrupt the cached catalog`() = runTest {
+        coEvery { api.getAnimeGenres() } returns AnimeGenreListResponseDto(
+            data = listOf(
+                AnimeGenreDto(malId = 2, name = "Adventure", count = 20),
+                AnimeGenreDto(malId = 1, name = "Action", count = 30)
+            )
+        )
+
+        val exposedGenres = repository.getAnimeGenres() as MutableList<AnimeGenre>
+        exposedGenres[0] = AnimeGenre(id = 99, name = "Corrupted", count = null)
+
+        assertEquals(listOf("Action", "Adventure"), repository.getAnimeGenres().map { it.name })
         coVerify(exactly = 1) { api.getAnimeGenres() }
     }
 

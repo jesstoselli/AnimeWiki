@@ -17,6 +17,8 @@ import com.example.animewiki.data.remote.JikanApi
 import com.example.animewiki.domain.model.Anime
 import com.example.animewiki.domain.model.AnimeBrowseCriteria
 import com.example.animewiki.domain.model.AnimeGenre
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -30,6 +32,7 @@ class AnimeRepository @Inject constructor(
     private val favoriteDao: FavoriteDao
 ) {
     private var cachedGenres: List<AnimeGenre>? = null
+    private val genreCacheMutex = Mutex()
 
     fun topAnime(): Flow<PagingData<Anime>> = Pager(
         config = PagingConfig(
@@ -68,15 +71,18 @@ class AnimeRepository @Inject constructor(
         pagingData.filter { anime -> seenIds.add(anime.id) }
     }
 
-    suspend fun getAnimeGenres(forceRefresh: Boolean = false): List<AnimeGenre> {
-        if (!forceRefresh) cachedGenres?.let { return it }
-        val genres = api.getAnimeGenres().data.orEmpty()
-            .mapNotNull { it.toDomain() }
-            .sortedBy { it.name.lowercase() }
-        check(genres.isNotEmpty()) { "Jikan returned an empty anime genre catalog" }
-        cachedGenres = genres
-        return genres
-    }
+    suspend fun getAnimeGenres(forceRefresh: Boolean = false): List<AnimeGenre> =
+        genreCacheMutex.withLock {
+            if (!forceRefresh) cachedGenres?.let { return@withLock it.toList() }
+
+            val genres = api.getAnimeGenres().data.orEmpty()
+                .mapNotNull { it.toDomain() }
+                .sortedBy { it.name.lowercase() }
+            check(genres.isNotEmpty()) { "Jikan returned an empty anime genre catalog" }
+
+            cachedGenres = genres.toList()
+            genres.toList()
+        }
 
     fun observeFavorites(): Flow<List<Anime>> =
         favoriteDao.observeAll().map { list -> list.map { it.toDomain() } }
