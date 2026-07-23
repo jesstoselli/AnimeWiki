@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -60,7 +61,8 @@ internal fun AnimeFilterSheet(
         ) {
             Text(
                 text = stringResource(R.string.filters_title),
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.semantics { heading() }
             )
             FilterOptions(
                 draft = draft,
@@ -199,5 +201,9 @@ private fun FilterSheetActions(onClear: () -> Unit, onApply: () -> Unit) {
 
 @Composable
 private fun FilterSectionTitle(@StringRes text: Int) {
-    Text(stringResource(text), style = MaterialTheme.typography.titleMedium)
+    Text(
+        text = stringResource(text),
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.semantics { heading() }
+    )
 }

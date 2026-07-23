@@ -18,6 +18,8 @@
     <string name="search_placeholder">Search anime\u2026</string>
     <string name="search_empty_title">No results for \"%1$s\"</string>
     <string name="search_empty_message">Try a different search</string>
+    <string name="filters_empty_title">No anime match these filters</string>
+    <string name="filters_empty_message">Remove or change some filters and try again</string>
 
     <!-- Discovery filters -->
     <string name="discover_title">Discover</string>

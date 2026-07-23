@@ -17,6 +17,8 @@
     <string name="search_placeholder">Buscar anime\u2026</string>
     <string name="search_empty_title">Nada encontrado pra \"%1$s\"</string>
     <string name="search_empty_message">Tenta uma busca diferente</string>
+    <string name="filters_empty_title">Nenhum anime com esses filtros</string>
+    <string name="filters_empty_message">Remova ou altere alguns filtros e tente de novo</string>
 
     <!-- Discovery filters -->
     <string name="discover_title">Descobrir</string>

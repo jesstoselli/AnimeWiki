@@ -24,6 +24,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -36,11 +39,14 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.example.animewiki.R
 import com.example.animewiki.domain.model.Anime
+import com.example.animewiki.domain.model.AnimeFilters
 import com.example.animewiki.ui.common.LoadErrorType
 import com.example.animewiki.ui.common.toLoadErrorType
 import com.example.animewiki.ui.components.AnimeWikiScaffold
 import com.example.animewiki.ui.screens.topAnime.components.AnimeCard
-import com.example.animewiki.ui.screens.topAnime.components.EmptySearchState
+import com.example.animewiki.ui.screens.topAnime.components.AnimeFilterBar
+import com.example.animewiki.ui.screens.topAnime.components.AnimeFilterSheet
+import com.example.animewiki.ui.screens.topAnime.components.EmptyBrowseState
 import com.example.animewiki.ui.screens.topAnime.components.FullScreenError
 import com.example.animewiki.ui.screens.topAnime.components.LoadErrorBanner
 import com.example.animewiki.ui.screens.topAnime.components.SearchField
@@ -55,9 +61,13 @@ fun TopAnimeScreen(
 ) {
     val items = viewModel.animeList.collectAsLazyPagingItems()
     val query by viewModel.query.collectAsStateWithLifecycle()
+    val filters by viewModel.filters.collectAsStateWithLifecycle()
+    val genresState by viewModel.genresState.collectAsStateWithLifecycle()
+    var showFilters by rememberSaveable { mutableStateOf(false) }
+    val genres = (genresState as? AnimeGenresState.Content)?.genres.orEmpty()
 
     AnimeWikiScaffold(
-        title = stringResource(R.string.top_anime_title),
+        title = stringResource(R.string.discover_title),
         actions = {
             IconButton(onClick = onSettingsClick) {
                 Icon(
@@ -80,41 +90,82 @@ fun TopAnimeScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 8.dp)
             )
+            AnimeFilterBar(
+                filters = filters,
+                genres = genres,
+                onOpen = {
+                    viewModel.loadGenres()
+                    showFilters = true
+                },
+                onChange = viewModel::applyFilters,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+            )
 
-            val isEmpty = items.itemCount == 0
-            val refreshState = items.loadState.refresh
+            TopAnimeBrowseResults(
+                items = items,
+                query = query,
+                filters = filters,
+                onAnimeClick = onAnimeClick
+            )
+        }
+    }
 
-            Box(modifier = Modifier.fillMaxSize()) {
-                when {
-                    isEmpty && refreshState is LoadState.Loading -> SkeletonGrid(
-                        modifier = Modifier.fillMaxSize()
-                    )
+    if (showFilters) {
+        AnimeFilterSheet(
+            appliedFilters = filters,
+            genresState = genresState,
+            onDismiss = { showFilters = false },
+            onApply = {
+                viewModel.applyFilters(it)
+                showFilters = false
+            },
+            onRetryGenres = viewModel::retryGenres
+        )
+    }
+}
 
-                    isEmpty && refreshState is LoadState.Error -> {
-                        val errorType = refreshState.error.toLoadErrorType()
-                        val message = when (errorType) {
-                            LoadErrorType.NO_CONNECTION -> stringResource(R.string.error_no_connection)
-                            LoadErrorType.SERVER -> stringResource(R.string.error_server)
-                        }
-                        FullScreenError(
-                            message = message,
-                            onRetry = { items.retry() }
-                        )
-                    }
+@Composable
+private fun TopAnimeBrowseResults(
+    items: LazyPagingItems<Anime>,
+    query: String,
+    filters: AnimeFilters,
+    onAnimeClick: (Int) -> Unit
+) {
+    val isEmpty = items.itemCount == 0
+    val refreshState = items.loadState.refresh
 
-                    isEmpty && refreshState is LoadState.NotLoading && query.isNotBlank() ->
-                        EmptySearchState(query = query)
+    Box(modifier = Modifier.fillMaxSize()) {
+        when {
+            isEmpty && refreshState is LoadState.Loading -> SkeletonGrid(
+                modifier = Modifier.fillMaxSize()
+            )
 
-                    else -> TopAnimeContent(items, onAnimeClick)
+            isEmpty && refreshState is LoadState.Error -> {
+                val errorType = refreshState.error.toLoadErrorType()
+                val message = when (errorType) {
+                    LoadErrorType.NO_CONNECTION -> stringResource(R.string.error_no_connection)
+                    LoadErrorType.SERVER -> stringResource(R.string.error_server)
                 }
-
-                if (refreshState is LoadState.Error && !isEmpty) {
-                    LoadErrorBanner(
-                        type = refreshState.error.toLoadErrorType(),
-                        modifier = Modifier.align(Alignment.TopCenter)
-                    )
-                }
+                FullScreenError(
+                    message = message,
+                    onRetry = { items.retry() }
+                )
             }
+
+            isEmpty && refreshState is LoadState.NotLoading &&
+                (query.isNotBlank() || !filters.isEmpty) ->
+                EmptyBrowseState(query = query, hasActiveFilters = !filters.isEmpty)
+
+            else -> TopAnimeContent(items, onAnimeClick)
+        }
+
+        if (refreshState is LoadState.Error && !isEmpty) {
+            LoadErrorBanner(
+                type = refreshState.error.toLoadErrorType(),
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
         }
     }
 }

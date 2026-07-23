@@ -1,7 +1,7 @@
 package com.example.animewiki.ui.screens.topAnime
 
-import app.cash.turbine.test
 import androidx.paging.PagingData
+import app.cash.turbine.test
 import com.example.animewiki.data.repository.AnimeRepository
 import com.example.animewiki.domain.model.AnimeAgeRating
 import com.example.animewiki.domain.model.AnimeFilters
@@ -16,19 +16,20 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.yield
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import java.io.IOException
+import kotlinx.coroutines.yield
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TopAnimeViewModelTest {
@@ -98,9 +99,37 @@ class TopAnimeViewModelTest {
 
         verify { repository.topAnime() }
         verify {
-            repository.searchAnime(match {
-                it.query.isEmpty() && it.filters.format == AnimeFormat.TV
-            })
+            repository.searchAnime(
+                match {
+                    it.query.isEmpty() && it.filters.format == AnimeFormat.TV
+                }
+            )
+        }
+        job.cancel()
+    }
+
+    @Test
+    fun `query and applied filters form one normalized paging identity`() = runTest {
+        val viewModel = TopAnimeViewModel(repository)
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.animeList.collect {}
+        }
+
+        viewModel.onQueryChange("  frieren  ")
+        viewModel.applyFilters(
+            AnimeFilters(rating = AnimeAgeRating.PG13, genreIds = setOf(10, 1))
+        )
+        advanceTimeBy(401)
+        advanceUntilIdle()
+
+        verify {
+            repository.searchAnime(
+                match {
+                    it.query == "frieren" &&
+                        it.filters.rating == AnimeAgeRating.PG13 &&
+                        it.filters.genresQuery == "1,10"
+                }
+            )
         }
         job.cancel()
     }

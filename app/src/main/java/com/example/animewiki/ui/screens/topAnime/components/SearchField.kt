@@ -57,10 +57,22 @@ fun SearchField(
 }
 
 @Composable
-fun EmptySearchState(
+fun EmptyBrowseState(
     query: String,
+    hasActiveFilters: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val title = if (query.isNotBlank()) {
+        stringResource(R.string.search_empty_title, query)
+    } else {
+        stringResource(R.string.filters_empty_title)
+    }
+    val message = if (hasActiveFilters) {
+        stringResource(R.string.filters_empty_message)
+    } else {
+        stringResource(R.string.search_empty_message)
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -74,12 +86,12 @@ fun EmptySearchState(
             modifier = Modifier.padding(bottom = 16.dp)
         )
         Text(
-            text = stringResource(R.string.search_empty_title, query),
+            text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
         Text(
-            text = stringResource(R.string.search_empty_message),
+            text = message,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp)

@@ -4,8 +4,8 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -52,7 +52,7 @@ private data class TabItem(
 )
 
 private val tabs = listOf(
-    TabItem(Tabs.TOP, R.string.tab_top, Icons.Default.Star),
+    TabItem(Tabs.TOP, R.string.tab_discover, Icons.Default.Explore),
     TabItem(Tabs.FAVORITES, R.string.tab_favorites, Icons.Default.Favorite)
 )
 
