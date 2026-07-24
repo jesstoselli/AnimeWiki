@@ -21,6 +21,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.yield
@@ -129,6 +130,64 @@ class TopAnimeViewModelTest {
                         it.filters.rating == AnimeAgeRating.PG13 &&
                         it.filters.genresQuery == "1,10"
                 }
+            )
+        }
+        job.cancel()
+    }
+
+    @Test
+    fun `applying filters during a pending query debounce only searches with the debounced query`() = runTest {
+        val viewModel = TopAnimeViewModel(repository)
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.animeList.collect {}
+        }
+        advanceUntilIdle()
+
+        viewModel.onQueryChange("  frieren  ")
+        runCurrent()
+        viewModel.applyFilters(AnimeFilters(format = AnimeFormat.TV))
+        runCurrent()
+
+        verify(exactly = 0) {
+            repository.searchAnime(
+                match { it.query.isEmpty() && it.filters.format == AnimeFormat.TV }
+            )
+        }
+
+        advanceTimeBy(400)
+        runCurrent()
+
+        verify(exactly = 1) {
+            repository.searchAnime(
+                match { it.query == "frieren" && it.filters.format == AnimeFormat.TV }
+            )
+        }
+        job.cancel()
+    }
+
+    @Test
+    fun `clearing filters during a pending query debounce waits for the query`() = runTest {
+        val viewModel = TopAnimeViewModel(repository)
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.animeList.collect {}
+        }
+        advanceUntilIdle()
+        viewModel.applyFilters(AnimeFilters(format = AnimeFormat.TV))
+        advanceUntilIdle()
+
+        viewModel.onQueryChange("frieren")
+        runCurrent()
+        viewModel.clearFilters()
+        runCurrent()
+
+        verify(exactly = 1) { repository.topAnime() }
+
+        advanceTimeBy(400)
+        runCurrent()
+
+        verify(exactly = 1) {
+            repository.searchAnime(
+                match { it.query == "frieren" && it.filters == AnimeFilters() }
             )
         }
         job.cancel()

@@ -37,11 +37,12 @@ class TopAnimeViewModel @Inject constructor(
     val genresState: StateFlow<AnimeGenresState> = _genresState.asStateFlow()
 
     private val criteria = combine(
-        _query.debounce { value -> if (value.isBlank()) 0L else 400L },
+        _query,
         _filters
     ) { query, filters ->
         AnimeBrowseCriteria.create(query, filters)
     }
+        .debounce { criteria -> if (criteria.query.isBlank()) 0L else 400L }
         .distinctUntilChanged()
 
     val animeList: Flow<PagingData<Anime>> = criteria

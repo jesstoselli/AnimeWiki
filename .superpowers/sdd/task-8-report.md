@@ -39,3 +39,22 @@ Result: `BUILD SUCCESSFUL` in 4m05s, with 62 tasks executed.
 - `git diff --check`: clean.
 - The release diff is limited to the R1 implementation, tests, documentation, and SDD reports.
 - Final whole-branch code and architecture reviews remain the next gate.
+
+## Final review follow-up: query and filter debounce
+
+- Fixed the final-review race where debouncing `_query` before `combine` allowed a
+  filter change during the 400 ms window to pair with the last emitted query.
+- The ViewModel now combines the raw query and filters into `AnimeBrowseCriteria`
+  first, then dynamically debounces the complete criterion. Blank criteria remain
+  immediate; `distinctUntilChanged`, `flatMapLatest`, and `cachedIn` are unchanged.
+- TDD RED: the focused ViewModel test failed deterministically with two failures:
+  applying a filter emitted an empty-query criteria search, and clearing a filter
+  emitted `topAnime()` before the pending nonblank query elapsed.
+- TDD GREEN: added deterministic virtual-time coverage for both directions using
+  `runCurrent()` and `advanceTimeBy(400)`; the focused test passed after the fix.
+
+| Command | Result |
+| --- | --- |
+| `./gradlew testDebugUnitTest --tests "com.example.animewiki.ui.screens.topAnime.TopAnimeViewModelTest"` | Passed (12 tests) |
+| `./gradlew testDebugUnitTest` | Passed |
+| `./gradlew detekt` | Passed |
