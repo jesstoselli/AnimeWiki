@@ -69,3 +69,13 @@ Result: `BUILD SUCCESSFUL` in 4m05s, with 62 tasks executed.
 - RED: three focused tests failed against the first fix, covering apply/clear during
   a pending query and filter changes after a settled query.
 - GREEN: all 13 focused ViewModel tests passed after the coordinated-stream change.
+
+## Third review follow-up: filter-event snapshots
+
+- Replaced the filter flow's late `_query.value` read with an immutable criterion
+  snapshot emitted synchronously by `applyFilters`.
+- Query events remain debounced and attach the latest filters when their timer elapses.
+- `clearFilters` and `removeGenre` now use the same canonical mutation path.
+- Added StandardTestDispatcher coverage proving a filter event cannot consume a query
+  entered later, plus explicit negative assertions against stale search/top requests.
+- All 14 focused ViewModel tests passed.

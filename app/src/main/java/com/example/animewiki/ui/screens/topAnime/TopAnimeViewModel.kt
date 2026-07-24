@@ -12,12 +12,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -34,6 +34,10 @@ class TopAnimeViewModel @Inject constructor(
 
     private val _filters = MutableStateFlow(AnimeFilters())
     val filters: StateFlow<AnimeFilters> = _filters.asStateFlow()
+    private val filterCriteria = MutableSharedFlow<AnimeBrowseCriteria>(
+        replay = 1,
+        extraBufferCapacity = 1
+    )
 
     private val _genresState = MutableStateFlow<AnimeGenresState>(AnimeGenresState.Idle)
     val genresState: StateFlow<AnimeGenresState> = _genresState.asStateFlow()
@@ -41,10 +45,6 @@ class TopAnimeViewModel @Inject constructor(
     private val queryCriteria = _query
         .debounce { query -> if (query.isBlank()) 0L else 400L }
         .map { query -> AnimeBrowseCriteria.create(query, _filters.value) }
-
-    private val filterCriteria = _filters
-        .drop(1)
-        .map { filters -> AnimeBrowseCriteria.create(_query.value, filters) }
 
     private val criteria = merge(queryCriteria, filterCriteria)
         .distinctUntilChanged()
@@ -69,14 +69,15 @@ class TopAnimeViewModel @Inject constructor(
 
     fun applyFilters(filters: AnimeFilters) {
         _filters.value = filters
+        check(filterCriteria.tryEmit(AnimeBrowseCriteria.create(_query.value, filters)))
     }
 
     fun clearFilters() {
-        _filters.value = AnimeFilters()
+        applyFilters(AnimeFilters())
     }
 
     fun removeGenre(id: Int) {
-        _filters.value = _filters.value.copy(genreIds = _filters.value.genreIds - id)
+        applyFilters(_filters.value.copy(genreIds = _filters.value.genreIds - id))
     }
 
     @Suppress("TooGenericExceptionCaught")

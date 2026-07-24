@@ -7,9 +7,9 @@ import com.example.animewiki.domain.model.AnimeAgeRating
 import com.example.animewiki.domain.model.AnimeFilters
 import com.example.animewiki.domain.model.AnimeFormat
 import com.example.animewiki.domain.model.AnimeGenre
+import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -154,6 +154,11 @@ class TopAnimeViewModelTest {
                 match { it.query == "frieren" && it.filters.format == AnimeFormat.TV }
             )
         }
+        verify(exactly = 0) {
+            repository.searchAnime(
+                match { it.query.isEmpty() && it.filters.format == AnimeFormat.TV }
+            )
+        }
 
         advanceTimeBy(400)
         runCurrent()
@@ -175,6 +180,7 @@ class TopAnimeViewModelTest {
         advanceUntilIdle()
         viewModel.applyFilters(AnimeFilters(format = AnimeFormat.TV))
         advanceUntilIdle()
+        clearMocks(repository, answers = false)
 
         viewModel.onQueryChange("frieren")
         runCurrent()
@@ -186,6 +192,7 @@ class TopAnimeViewModelTest {
                 match { it.query == "frieren" && it.filters == AnimeFilters() }
             )
         }
+        verify(exactly = 0) { repository.topAnime() }
 
         advanceTimeBy(400)
         runCurrent()
@@ -193,6 +200,41 @@ class TopAnimeViewModelTest {
         verify(exactly = 1) {
             repository.searchAnime(
                 match { it.query == "frieren" && it.filters == AnimeFilters() }
+            )
+        }
+        job.cancel()
+    }
+
+    @Test
+    fun `filter snapshot does not consume a later query before its debounce`() = runTest {
+        val viewModel = TopAnimeViewModel(repository)
+        val job = backgroundScope.launch(StandardTestDispatcher(testScheduler)) {
+            viewModel.animeList.collect {}
+        }
+        runCurrent()
+        clearMocks(repository, answers = false)
+
+        viewModel.applyFilters(AnimeFilters(format = AnimeFormat.TV))
+        viewModel.onQueryChange("frieren")
+        runCurrent()
+
+        verify(exactly = 1) {
+            repository.searchAnime(
+                match { it.query.isEmpty() && it.filters.format == AnimeFormat.TV }
+            )
+        }
+        verify(exactly = 0) {
+            repository.searchAnime(
+                match { it.query == "frieren" && it.filters.format == AnimeFormat.TV }
+            )
+        }
+
+        advanceTimeBy(400)
+        runCurrent()
+
+        verify(exactly = 1) {
+            repository.searchAnime(
+                match { it.query == "frieren" && it.filters.format == AnimeFormat.TV }
             )
         }
         job.cancel()
