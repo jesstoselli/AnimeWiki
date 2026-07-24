@@ -15,10 +15,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -36,13 +38,15 @@ class TopAnimeViewModel @Inject constructor(
     private val _genresState = MutableStateFlow<AnimeGenresState>(AnimeGenresState.Idle)
     val genresState: StateFlow<AnimeGenresState> = _genresState.asStateFlow()
 
-    private val criteria = combine(
-        _query,
-        _filters
-    ) { query, filters ->
-        AnimeBrowseCriteria.create(query, filters)
-    }
-        .debounce { criteria -> if (criteria.query.isBlank()) 0L else 400L }
+    private val queryCriteria = _query
+        .debounce { query -> if (query.isBlank()) 0L else 400L }
+        .map { query -> AnimeBrowseCriteria.create(query, _filters.value) }
+
+    private val filterCriteria = _filters
+        .drop(1)
+        .map { filters -> AnimeBrowseCriteria.create(_query.value, filters) }
+
+    private val criteria = merge(queryCriteria, filterCriteria)
         .distinctUntilChanged()
 
     val animeList: Flow<PagingData<Anime>> = criteria

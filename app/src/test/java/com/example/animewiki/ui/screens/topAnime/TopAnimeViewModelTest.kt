@@ -9,6 +9,7 @@ import com.example.animewiki.domain.model.AnimeFormat
 import com.example.animewiki.domain.model.AnimeGenre
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -136,7 +137,7 @@ class TopAnimeViewModelTest {
     }
 
     @Test
-    fun `applying filters during a pending query debounce only searches with the debounced query`() = runTest {
+    fun `applying filters during a pending query uses the current query immediately`() = runTest {
         val viewModel = TopAnimeViewModel(repository)
         val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.animeList.collect {}
@@ -148,9 +149,9 @@ class TopAnimeViewModelTest {
         viewModel.applyFilters(AnimeFilters(format = AnimeFormat.TV))
         runCurrent()
 
-        verify(exactly = 0) {
+        verify(exactly = 1) {
             repository.searchAnime(
-                match { it.query.isEmpty() && it.filters.format == AnimeFormat.TV }
+                match { it.query == "frieren" && it.filters.format == AnimeFormat.TV }
             )
         }
 
@@ -166,7 +167,7 @@ class TopAnimeViewModelTest {
     }
 
     @Test
-    fun `clearing filters during a pending query debounce waits for the query`() = runTest {
+    fun `clearing filters during a pending query uses the current query immediately`() = runTest {
         val viewModel = TopAnimeViewModel(repository)
         val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.animeList.collect {}
@@ -180,7 +181,11 @@ class TopAnimeViewModelTest {
         viewModel.clearFilters()
         runCurrent()
 
-        verify(exactly = 1) { repository.topAnime() }
+        verify(exactly = 1) {
+            repository.searchAnime(
+                match { it.query == "frieren" && it.filters == AnimeFilters() }
+            )
+        }
 
         advanceTimeBy(400)
         runCurrent()
@@ -188,6 +193,30 @@ class TopAnimeViewModelTest {
         verify(exactly = 1) {
             repository.searchAnime(
                 match { it.query == "frieren" && it.filters == AnimeFilters() }
+            )
+        }
+        job.cancel()
+    }
+
+    @Test
+    fun `changing filters after query debounce refreshes criteria immediately`() = runTest {
+        val viewModel = TopAnimeViewModel(repository)
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.animeList.collect {}
+        }
+        advanceUntilIdle()
+
+        viewModel.onQueryChange("frieren")
+        advanceTimeBy(400)
+        runCurrent()
+        clearMocks(repository, answers = false)
+
+        viewModel.applyFilters(AnimeFilters(format = AnimeFormat.TV))
+        runCurrent()
+
+        verify(exactly = 1) {
+            repository.searchAnime(
+                match { it.query == "frieren" && it.filters.format == AnimeFormat.TV }
             )
         }
         job.cancel()

@@ -58,3 +58,14 @@ Result: `BUILD SUCCESSFUL` in 4m05s, with 62 tasks executed.
 | `./gradlew testDebugUnitTest --tests "com.example.animewiki.ui.screens.topAnime.TopAnimeViewModelTest"` | Passed (12 tests) |
 | `./gradlew testDebugUnitTest` | Passed |
 | `./gradlew detekt` | Passed |
+
+## Second review follow-up: immediate filter changes
+
+- The first race fix delayed filter changes by 400 ms after an already settled query.
+- Query and filter changes now have coordinated criterion streams:
+  - query changes retain the 400 ms debounce;
+  - filter changes immediately pair with the current raw query;
+  - `distinctUntilChanged` suppresses the later duplicate query emission.
+- RED: three focused tests failed against the first fix, covering apply/clear during
+  a pending query and filter changes after a settled query.
+- GREEN: all 13 focused ViewModel tests passed after the coordinated-stream change.
