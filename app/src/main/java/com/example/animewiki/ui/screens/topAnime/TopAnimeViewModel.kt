@@ -12,13 +12,13 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
@@ -34,10 +34,7 @@ class TopAnimeViewModel @Inject constructor(
 
     private val _filters = MutableStateFlow(AnimeFilters())
     val filters: StateFlow<AnimeFilters> = _filters.asStateFlow()
-    private val filterCriteria = MutableSharedFlow<AnimeBrowseCriteria>(
-        replay = 1,
-        extraBufferCapacity = 1
-    )
+    private val filterCriteria = MutableStateFlow<AnimeBrowseCriteria?>(null)
 
     private val _genresState = MutableStateFlow<AnimeGenresState>(AnimeGenresState.Idle)
     val genresState: StateFlow<AnimeGenresState> = _genresState.asStateFlow()
@@ -46,7 +43,7 @@ class TopAnimeViewModel @Inject constructor(
         .debounce { query -> if (query.isBlank()) 0L else 400L }
         .map { query -> AnimeBrowseCriteria.create(query, _filters.value) }
 
-    private val criteria = merge(queryCriteria, filterCriteria)
+    private val criteria = merge(queryCriteria, filterCriteria.filterNotNull())
         .distinctUntilChanged()
 
     val animeList: Flow<PagingData<Anime>> = criteria
@@ -69,7 +66,7 @@ class TopAnimeViewModel @Inject constructor(
 
     fun applyFilters(filters: AnimeFilters) {
         _filters.value = filters
-        check(filterCriteria.tryEmit(AnimeBrowseCriteria.create(_query.value, filters)))
+        filterCriteria.value = AnimeBrowseCriteria.create(_query.value, filters)
     }
 
     fun clearFilters() {

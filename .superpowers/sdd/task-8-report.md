@@ -79,3 +79,11 @@ Result: `BUILD SUCCESSFUL` in 4m05s, with 62 tasks executed.
 - Added StandardTestDispatcher coverage proving a filter event cannot consume a query
   entered later, plus explicit negative assertions against stale search/top requests.
 - All 14 focused ViewModel tests passed.
+
+## Fourth review follow-up: burst-safe filter snapshots
+
+- Replaced the buffered `MutableSharedFlow` with a nullable `MutableStateFlow`.
+- Rapid synchronous filter changes now conflate safely to the latest immutable criterion
+  instead of risking a failed `tryEmit` and UI crash.
+- RED: the focused burst test reproduced the previous `IllegalStateException`.
+- GREEN: all 15 focused ViewModel tests passed with the state-backed snapshot.

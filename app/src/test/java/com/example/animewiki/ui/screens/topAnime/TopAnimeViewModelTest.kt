@@ -241,6 +241,28 @@ class TopAnimeViewModelTest {
     }
 
     @Test
+    fun `rapid filter changes keep the latest criterion without crashing`() = runTest {
+        val viewModel = TopAnimeViewModel(repository)
+        val job = backgroundScope.launch(StandardTestDispatcher(testScheduler)) {
+            viewModel.animeList.collect {}
+        }
+        runCurrent()
+        clearMocks(repository, answers = false)
+
+        viewModel.applyFilters(AnimeFilters(format = AnimeFormat.TV))
+        viewModel.applyFilters(AnimeFilters(format = AnimeFormat.MOVIE))
+        viewModel.applyFilters(AnimeFilters(rating = AnimeAgeRating.PG13))
+        runCurrent()
+
+        verify(exactly = 1) {
+            repository.searchAnime(
+                match { it.query.isEmpty() && it.filters.rating == AnimeAgeRating.PG13 }
+            )
+        }
+        job.cancel()
+    }
+
+    @Test
     fun `changing filters after query debounce refreshes criteria immediately`() = runTest {
         val viewModel = TopAnimeViewModel(repository)
         val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
