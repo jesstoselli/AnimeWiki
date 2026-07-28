@@ -1,5 +1,6 @@
 package com.example.animewiki.ui.common
 
+import com.apollographql.apollo.exception.ApolloNetworkException
 import java.io.IOException
 
 /**
@@ -15,9 +16,13 @@ enum class LoadErrorType {
 }
 
 /**
- * Only [IOException] (and its subclasses: UnknownHostException, SocketTimeoutException,
- * ConnectException, ...) means "we couldn't reach the API". Everything else — HttpException,
- * SerializationException — got a response and is a server-side or data problem.
+ * [ApolloNetworkException] and [IOException] (including UnknownHostException,
+ * SocketTimeoutException, and ConnectException) mean "we couldn't reach the API".
+ * Everything else represents a server-side, GraphQL, or data problem.
  */
 fun Throwable.toLoadErrorType(): LoadErrorType =
-    if (this is IOException) LoadErrorType.NO_CONNECTION else LoadErrorType.SERVER
+    if (this is ApolloNetworkException || this is IOException) {
+        LoadErrorType.NO_CONNECTION
+    } else {
+        LoadErrorType.SERVER
+    }

@@ -1,5 +1,7 @@
 package com.example.animewiki.ui.common
 
+import com.apollographql.apollo.exception.ApolloNetworkException
+import com.example.animewiki.data.remote.AniListGraphQlException
 import kotlinx.serialization.SerializationException
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -41,5 +43,21 @@ class LoadErrorTypeTest {
     @Test
     fun `generic runtime failure is treated as a server error`() {
         assertEquals(LoadErrorType.SERVER, RuntimeException("500").toLoadErrorType())
+    }
+
+    @Test
+    fun `Apollo network failure is treated as no connection`() {
+        assertEquals(
+            LoadErrorType.NO_CONNECTION,
+            ApolloNetworkException().toLoadErrorType()
+        )
+    }
+
+    @Test
+    fun `AniList GraphQL failure is treated as a server error`() {
+        assertEquals(
+            LoadErrorType.SERVER,
+            AniListGraphQlException("upstream failed").toLoadErrorType()
+        )
     }
 }
