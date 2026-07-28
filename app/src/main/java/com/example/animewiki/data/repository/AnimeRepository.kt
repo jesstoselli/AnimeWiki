@@ -14,10 +14,13 @@ import com.example.animewiki.data.mapper.toDomain
 import com.example.animewiki.data.mapper.toFavoriteEntity
 import com.example.animewiki.data.paging.AnimeSearchPagingSource
 import com.example.animewiki.data.paging.TopAnimeRemoteMediator
-import com.example.animewiki.data.remote.JikanApi
+import com.example.animewiki.data.remote.dataOrAniListError
 import com.example.animewiki.domain.model.Anime
 import com.example.animewiki.domain.model.AnimeBrowseCriteria
 import com.example.animewiki.domain.model.AnimeGenre
+import com.example.animewiki.graphql.AnimeDetailsQuery
+import com.example.animewiki.graphql.GenreCollectionQuery
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
@@ -32,7 +35,6 @@ import javax.inject.Singleton
 @OptIn(ExperimentalPagingApi::class)
 class AnimeRepository @Inject constructor(
     private val apolloClient: ApolloClient,
-    private val api: JikanApi,
     private val db: AppDatabase,
     private val favoriteDao: FavoriteDao
 ) {
@@ -47,7 +49,7 @@ class AnimeRepository @Inject constructor(
             enablePlaceholders = false,
             initialLoadSize = 25
         ),
-        remoteMediator = TopAnimeRemoteMediator(api, db),
+        remoteMediator = TopAnimeRemoteMediator(apolloClient, db),
         pagingSourceFactory = { db.animeDao().pagingSource() }
     ).flow.map { pagingData ->
         pagingData.map { it.toDomain() }
@@ -58,7 +60,15 @@ class AnimeRepository @Inject constructor(
     suspend fun getAnimeDetails(id: Int): Anime? {
         val cached = db.animeDao().getById(id)?.toDomain()
         return try {
-            api.getAnimeDetails(id).data?.toDomain() ?: cached
+            apolloClient.query(AnimeDetailsQuery(id))
+                .execute()
+                .dataOrAniListError()
+                .Media
+                ?.animeCacheFields
+                ?.toDomain()
+                ?: cached
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w("AnimeRepository", "Failed to fetch details for id=$id, using cache", e)
             cached
@@ -89,10 +99,18 @@ class AnimeRepository @Inject constructor(
 
         if (ownsRefresh) {
             try {
-                val genres = api.getAnimeGenres().data.orEmpty()
-                    .mapNotNull { it.toDomain() }
-                    .sortedBy { it.name.lowercase() }
-                check(genres.isNotEmpty()) { "Jikan returned an empty anime genre catalog" }
+                val genres = apolloClient.query(GenreCollectionQuery())
+                    .execute()
+                    .dataOrAniListError()
+                    .genres
+                    .orEmpty()
+                    .mapNotNull { it?.takeIf(String::isNotBlank) }
+                    .distinct()
+                    .sortedBy(String::lowercase)
+                    .map(::AnimeGenre)
+                check(genres.isNotEmpty()) {
+                    "AniList returned an empty anime genre catalog"
+                }
                 val snapshot = genres.toList()
 
                 withContext(NonCancellable) {

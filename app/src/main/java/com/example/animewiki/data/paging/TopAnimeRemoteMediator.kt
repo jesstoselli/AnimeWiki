@@ -6,18 +6,29 @@ import androidx.paging.LoadType
 import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import androidx.room.withTransaction
+import com.apollographql.apollo.ApolloClient
+import com.apollographql.apollo.api.Optional
 import com.example.animewiki.data.local.AppDatabase
 import com.example.animewiki.data.local.entity.AnimeEntity
 import com.example.animewiki.data.local.entity.RemoteKeyEntity
 import com.example.animewiki.data.mapper.toEntity
-import com.example.animewiki.data.remote.JikanApi
+import com.example.animewiki.data.remote.AniListGraphQlException
+import com.example.animewiki.data.remote.dataOrAniListError
+import com.example.animewiki.graphql.TopAnimeQuery
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalPagingApi::class)
-class TopAnimeRemoteMediator(
-    private val api: JikanApi,
-    private val db: AppDatabase
+class TopAnimeRemoteMediator internal constructor(
+    private val apolloClient: ApolloClient,
+    private val db: AppDatabase,
+    private val transaction: suspend (suspend () -> Unit) -> Unit
 ) : RemoteMediator<Int, AnimeEntity>() {
+
+    constructor(apolloClient: ApolloClient, db: AppDatabase) : this(
+        apolloClient = apolloClient,
+        db = db,
+        transaction = { block -> db.withTransaction { block() } }
+    )
 
     override suspend fun initialize(): InitializeAction {
         // Comporta como "cache-first com refresh em segundo plano"
@@ -63,19 +74,36 @@ class TopAnimeRemoteMediator(
 
         return try {
             if (loadType == LoadType.APPEND) delay(400)
-            val response = api.getTopAnime(page = page, limit = state.config.pageSize)
-            val hasNext = response.pagination?.hasNextPage == true
-            Log.d("Mediator", "page=$page returned ${response.data?.size} items, hasNext=$hasNext")
+            val response = apolloClient.query(
+                TopAnimeQuery(
+                    page = page,
+                    perPage = state.config.pageSize.coerceAtMost(25),
+                    isAdult = Optional.present(false)
+                )
+            ).execute()
+            val data = response.dataOrAniListError()
+            val resultPage = data.Page ?: throw AniListGraphQlException(
+                response.errors.orEmpty()
+                    .joinToString(separator = "; ") { it.message }
+                    .ifBlank { "AniList top response contained no page" }
+            )
+            val hasNext = resultPage.pageInfo?.hasNextPage == true
+            Log.d(
+                "Mediator",
+                "page=$page returned ${resultPage.media?.size} items, hasNext=$hasNext"
+            )
 
             val baseIndex = if (loadType == LoadType.REFRESH) {
                 0
             } else {
                 db.animeDao().maxPageIndex() + 1
             }
-            val entities = response.data.orEmpty()
-                .mapIndexedNotNull { i, dto -> dto.toEntity(baseIndex + i) }
+            val entities = resultPage.media.orEmpty()
+                .mapIndexedNotNull { i, media ->
+                    media?.animeCacheFields?.toEntity(baseIndex + i)
+                }
 
-            db.withTransaction {
+            transaction {
                 if (loadType == LoadType.REFRESH) {
                     db.remoteKeyDao().clearAll()
                     db.animeDao().clearAll()

@@ -1,57 +1,47 @@
 package com.example.animewiki.data.repository
 
 import com.apollographql.apollo.ApolloClient
+import com.apollographql.apollo.api.ApolloRequest
+import com.apollographql.apollo.api.ApolloResponse
+import com.apollographql.apollo.api.Operation
+import com.apollographql.apollo.interceptor.ApolloInterceptor
+import com.apollographql.apollo.interceptor.ApolloInterceptorChain
+import com.apollographql.mockserver.MockResponse
+import com.apollographql.mockserver.MockServer
 import com.example.animewiki.data.local.AppDatabase
 import com.example.animewiki.data.local.dao.AnimeDao
 import com.example.animewiki.data.local.dao.FavoriteDao
 import com.example.animewiki.data.local.entity.AnimeEntity
-import com.example.animewiki.data.remote.JikanApi
-import com.example.animewiki.data.remote.dto.AnimeDetailsResponseDto
-import com.example.animewiki.data.remote.dto.AnimeDto
-import com.example.animewiki.data.remote.dto.AnimeGenreDto
-import com.example.animewiki.data.remote.dto.AnimeGenreListResponseDto
-import com.example.animewiki.data.remote.dto.AnimeImageUrlsDto
-import com.example.animewiki.data.remote.dto.AnimeImagesDto
 import com.example.animewiki.domain.model.Anime
 import com.example.animewiki.domain.model.AnimeGenre
+import com.example.animewiki.graphql.GenreCollectionQuery
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
-import org.junit.Before
 import org.junit.Test
-import java.io.IOException
 
 class AnimeRepositoryTest {
 
-    private val apolloClient: ApolloClient = mockk()
-    private val api: JikanApi = mockk()
     private val animeDao: AnimeDao = mockk(relaxed = true)
     private val favoriteDao: FavoriteDao = mockk(relaxed = true)
     private val db: AppDatabase = mockk {
         every { animeDao() } returns this@AnimeRepositoryTest.animeDao
     }
 
-    private lateinit var repository: AnimeRepository
-
-    @Before
-    fun setUp() {
-        repository = AnimeRepository(apolloClient, api, db, favoriteDao)
-    }
-
     @Test
     fun `toggleFavorite inserts when anime is not yet favorite`() = runTest {
-        val anime = frieren()
-
-        repository.toggleFavorite(anime, isCurrentlyFavorite = false)
+        repository(mockk()).toggleFavorite(frieren(), isCurrentlyFavorite = false)
 
         coVerify(exactly = 1) { favoriteDao.insert(match { it.id == 52991 }) }
         coVerify(exactly = 0) { favoriteDao.deleteById(any()) }
@@ -59,102 +49,154 @@ class AnimeRepositoryTest {
 
     @Test
     fun `toggleFavorite deletes when anime is currently favorite`() = runTest {
-        val anime = frieren()
-
-        repository.toggleFavorite(anime, isCurrentlyFavorite = true)
+        repository(mockk()).toggleFavorite(frieren(), isCurrentlyFavorite = true)
 
         coVerify(exactly = 1) { favoriteDao.deleteById(52991) }
         coVerify(exactly = 0) { favoriteDao.insert(any()) }
     }
 
     @Test
-    fun `getAnimeDetails falls back to cached entity when network fails`() = runTest {
+    fun `getAnimeDetails prefers usable generated network detail over cache`() = runTest {
         coEvery { animeDao.getById(52991) } returns cachedFrierenEntity()
-        coEvery { api.getAnimeDetails(52991) } throws IOException("offline")
+        withServer(detailResponse("Frieren from AniList")) { _, client ->
+            val result = repository(client).getAnimeDetails(52991)
 
-        val result = repository.getAnimeDetails(52991)
-
-        assertEquals(52991, result?.id)
-        assertEquals("Sousou no Frieren (cached)", result?.title)
-    }
-
-    @Test
-    fun `getAnimeDetails prefers fresh network data over cache`() = runTest {
-        coEvery { animeDao.getById(52991) } returns cachedFrierenEntity()
-        coEvery { api.getAnimeDetails(52991) } returns AnimeDetailsResponseDto(
-            data = frierenDto()
-        )
-
-        val result = repository.getAnimeDetails(52991)
-
-        assertEquals("Sousou no Frieren", result?.title) // network title, not cached
-    }
-
-    @Test
-    fun `getAnimeGenres maps sorts and caches valid genres`() = runTest {
-        coEvery { api.getAnimeGenres() } returns AnimeGenreListResponseDto(
-            data = listOf(
-                AnimeGenreDto(malId = 2, name = "Adventure", count = 20),
-                AnimeGenreDto(malId = null, name = " "),
-                AnimeGenreDto(malId = 1, name = "Action", count = 30)
-            )
-        )
-
-        val first = repository.getAnimeGenres()
-        val second = repository.getAnimeGenres()
-
-        assertEquals(listOf("Action", "Adventure"), first.map { it.name })
-        assertEquals(first, second)
-        coVerify(exactly = 1) { api.getAnimeGenres() }
-    }
-
-    @Test
-    fun `concurrent genre cache misses share one remote request`() = runTest {
-        withTimeout(1_000) {
-            val releaseRemoteCall = CompletableDeferred<Unit>()
-            var remoteCalls = 0
-            coEvery { api.getAnimeGenres() } coAnswers {
-                remoteCalls += 1
-                releaseRemoteCall.await()
-                AnimeGenreListResponseDto(
-                    data = listOf(AnimeGenreDto(malId = 1, name = "Action", count = 30))
-                )
-            }
-
-            val requests = List(10) {
-                async(start = CoroutineStart.UNDISPATCHED) { repository.getAnimeGenres() }
-            }
-
-            assertEquals(1, remoteCalls)
-            releaseRemoteCall.complete(Unit)
-
-            assertEquals(
-                List(10) { listOf("Action") },
-                requests.awaitAll().map { it.map { genre -> genre.name } }
-            )
-            coVerify(exactly = 1) { api.getAnimeGenres() }
+            assertEquals(52991, result?.id)
+            assertEquals("Frieren from AniList", result?.title)
         }
     }
 
     @Test
-    fun `concurrent forced refreshes share one new remote request`() = runTest {
-        withTimeout(1_000) {
-            coEvery { api.getAnimeGenres() } returns AnimeGenreListResponseDto(
-                data = listOf(AnimeGenreDto(malId = 1, name = "Cached", count = 10))
-            )
-            repository.getAnimeGenres()
+    fun `getAnimeDetails accepts usable detail beside GraphQL field errors`() = runTest {
+        coEvery { animeDao.getById(52991) } returns cachedFrierenEntity()
+        withServer(detailResponse("Partial AniList", includeErrors = true)) { _, client ->
+            val result = repository(client).getAnimeDetails(52991)
 
-            val refreshStarted = CompletableDeferred<Unit>()
-            val releaseRefresh = CompletableDeferred<Unit>()
-            var refreshCalls = 0
-            coEvery { api.getAnimeGenres() } coAnswers {
-                refreshCalls += 1
-                refreshStarted.complete(Unit)
-                releaseRefresh.await()
-                AnimeGenreListResponseDto(
-                    data = listOf(AnimeGenreDto(malId = 2, name = "Refreshed", count = 20))
-                )
+            assertEquals("Partial AniList", result?.title)
+        }
+    }
+
+    @Test
+    fun `getAnimeDetails falls back to cache on GraphQL server failure`() = runTest {
+        coEvery { animeDao.getById(52991) } returns cachedFrierenEntity()
+        withServer("""{"data":null,"errors":[{"message":"details unavailable"}]}""") { _, client ->
+            val result = repository(client).getAnimeDetails(52991)
+
+            assertEquals("Sousou no Frieren (cached)", result?.title)
+        }
+    }
+
+    @Test
+    fun `getAnimeDetails falls back to cache on transport failure`() = runTest {
+        coEvery { animeDao.getById(52991) } returns cachedFrierenEntity()
+        val server = MockServer.Builder().build()
+        val client = ApolloClient.Builder().serverUrl(server.url()).build()
+        server.close()
+        try {
+            val result = repository(client).getAnimeDetails(52991)
+
+            assertEquals("Sousou no Frieren (cached)", result?.title)
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun `getAnimeDetails falls back to cache when AniList media is not found`() = runTest {
+        coEvery { animeDao.getById(52991) } returns cachedFrierenEntity()
+        withServer("""{"data":{"Media":null}}""") { _, client ->
+            val result = repository(client).getAnimeDetails(52991)
+
+            assertEquals("Sousou no Frieren (cached)", result?.title)
+        }
+    }
+
+    @Test
+    fun `getAnimeDetails rethrows cancellation instead of falling back`() = runTest {
+        val cancellation = CancellationException("cancel details")
+        coEvery { animeDao.getById(52991) } returns cachedFrierenEntity()
+        val client = ApolloClient.Builder()
+            .serverUrl("https://example.test/graphql")
+            .addInterceptor(CancellingInterceptor(cancellation))
+            .build()
+        try {
+            val thrown = try {
+                repository(client).getAnimeDetails(52991)
+                fail("Expected cancellation")
+                null
+            } catch (error: CancellationException) {
+                error
             }
+
+            assertEquals("cancel details", thrown?.message)
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun `getAnimeGenres keeps case distinct values sorts ignoring case and caches result`() =
+        runTest {
+            withServer(
+                """{"data":{"genres":["drama","Action","action","Action","  ",""]}}"""
+            ) { _, client ->
+                val repository = repository(client)
+
+                val first = repository.getAnimeGenres()
+                val second = repository.getAnimeGenres()
+
+                assertEquals(listOf("Action", "action", "drama"), first.map { it.name })
+                assertEquals(first, second)
+            }
+        }
+
+    @Test
+    fun `concurrent genre cache misses share one Apollo request`() = runTest {
+        val started = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val interceptor = GenreGateInterceptor(
+            responses = ArrayDeque(
+                listOf(GatedGenres(listOf("Action"), started, release))
+            )
+        )
+        val client = clientWith(interceptor)
+        try {
+            val repository = repository(client)
+            val requests = List(10) {
+                async(start = CoroutineStart.UNDISPATCHED) {
+                    repository.getAnimeGenres()
+                }
+            }
+
+            started.await()
+            assertEquals(1, interceptor.calls)
+            release.complete(Unit)
+            assertEquals(
+                List(10) { listOf("Action") },
+                requests.awaitAll().map { genres -> genres.map { it.name } }
+            )
+            assertEquals(1, interceptor.calls)
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun `concurrent forced genre refreshes share one new Apollo request`() = runTest {
+        val refreshStarted = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val interceptor = GenreGateInterceptor(
+            responses = ArrayDeque(
+                listOf(
+                    GatedGenres(listOf("Cached")),
+                    GatedGenres(listOf("Refreshed"), refreshStarted, release)
+                )
+            )
+        )
+        val client = clientWith(interceptor)
+        try {
+            val repository = repository(client)
+            repository.getAnimeGenres()
 
             val first = async(start = CoroutineStart.UNDISPATCHED) {
                 repository.getAnimeGenres(forceRefresh = true)
@@ -164,118 +206,165 @@ class AnimeRepositoryTest {
                 repository.getAnimeGenres(forceRefresh = true)
             }
 
-            assertEquals(1, refreshCalls)
-            releaseRefresh.complete(Unit)
-
+            assertEquals(2, interceptor.calls)
+            release.complete(Unit)
             assertEquals(
                 listOf(listOf("Refreshed"), listOf("Refreshed")),
                 awaitAll(first, second).map { genres -> genres.map { it.name } }
             )
-            assertEquals(1, refreshCalls)
-            coVerify(exactly = 2) { api.getAnimeGenres() }
+            assertEquals(2, interceptor.calls)
+        } finally {
+            client.close()
         }
     }
 
     @Test
-    fun `forced refresh after a completed refresh starts another remote request`() = runTest {
-        coEvery { api.getAnimeGenres() } returnsMany listOf(
-            AnimeGenreListResponseDto(
-                data = listOf(AnimeGenreDto(malId = 1, name = "Cached", count = 10))
-            ),
-            AnimeGenreListResponseDto(
-                data = listOf(AnimeGenreDto(malId = 2, name = "First refresh", count = 20))
-            ),
-            AnimeGenreListResponseDto(
-                data = listOf(AnimeGenreDto(malId = 3, name = "Second refresh", count = 30))
-            )
-        )
-        repository.getAnimeGenres()
+    fun `completed forced genre refresh allows a later forced request`() = runTest {
+        withServer(
+            """{"data":{"genres":["Cached"]}}""",
+            """{"data":{"genres":["First refresh"]}}""",
+            """{"data":{"genres":["Second refresh"]}}"""
+        ) { _, client ->
+            val repository = repository(client)
+            repository.getAnimeGenres()
 
-        val first = repository.getAnimeGenres(forceRefresh = true)
-        val second = repository.getAnimeGenres(forceRefresh = true)
+            val first = repository.getAnimeGenres(forceRefresh = true)
+            val second = repository.getAnimeGenres(forceRefresh = true)
 
-        assertEquals(listOf("First refresh"), first.map { it.name })
-        assertEquals(listOf("Second refresh"), second.map { it.name })
-        coVerify(exactly = 3) { api.getAnimeGenres() }
-    }
-
-    @Test
-    fun `empty forced refresh preserves a valid cached catalog`() = runTest {
-        coEvery { api.getAnimeGenres() } returnsMany listOf(
-            AnimeGenreListResponseDto(
-                data = listOf(AnimeGenreDto(malId = 1, name = "Cached", count = 10))
-            ),
-            AnimeGenreListResponseDto(data = emptyList())
-        )
-        repository.getAnimeGenres()
-
-        try {
-            repository.getAnimeGenres(forceRefresh = true)
-            fail("Expected an empty forced refresh to fail")
-        } catch (_: IllegalStateException) {
-            // Expected: the previous valid snapshot must remain cached.
+            assertEquals(listOf("First refresh"), first.map { it.name })
+            assertEquals(listOf("Second refresh"), second.map { it.name })
         }
-
-        assertEquals(listOf("Cached"), repository.getAnimeGenres().map { it.name })
-        coVerify(exactly = 2) { api.getAnimeGenres() }
     }
 
     @Test
-    fun `failed forced refresh preserves a valid cached catalog`() = runTest {
-        var remoteCalls = 0
-        coEvery { api.getAnimeGenres() } coAnswers {
-            remoteCalls += 1
-            if (remoteCalls == 1) {
-                AnimeGenreListResponseDto(
-                    data = listOf(AnimeGenreDto(malId = 1, name = "Cached", count = 10))
+    fun `failed forced refresh preserves good genre cache and releases in flight state`() =
+        runTest {
+            withServer(
+                """{"data":{"genres":["Cached"]}}""",
+                """{"data":null,"errors":[{"message":"genre failure"}]}""",
+                """{"data":{"genres":["Recovered"]}}"""
+            ) { _, client ->
+                val repository = repository(client)
+                repository.getAnimeGenres()
+
+                try {
+                    repository.getAnimeGenres(forceRefresh = true)
+                    fail("Expected failed forced refresh")
+                } catch (_: RuntimeException) {
+                    // The prior snapshot remains available and a later force refresh can own a new call.
+                }
+
+                assertEquals(listOf("Cached"), repository.getAnimeGenres().map { it.name })
+                assertEquals(
+                    listOf("Recovered"),
+                    repository.getAnimeGenres(forceRefresh = true).map { it.name }
                 )
-            } else {
-                throw IOException("offline")
             }
         }
-        repository.getAnimeGenres()
 
-        try {
-            repository.getAnimeGenres(forceRefresh = true)
-            fail("Expected a failed forced refresh to propagate")
-        } catch (_: IOException) {
-            // Expected: the previous valid snapshot must remain cached.
+    @Test
+    fun `empty forced refresh preserves a valid genre cache`() = runTest {
+        withServer(
+            """{"data":{"genres":["Cached"]}}""",
+            """{"data":{"genres":[]}}"""
+        ) { _, client ->
+            val repository = repository(client)
+            repository.getAnimeGenres()
+
+            try {
+                repository.getAnimeGenres(forceRefresh = true)
+                fail("Expected empty catalog failure")
+            } catch (_: IllegalStateException) {
+                // The previous valid snapshot must remain cached.
+            }
+
+            assertEquals(listOf("Cached"), repository.getAnimeGenres().map { it.name })
         }
-
-        assertEquals(listOf("Cached"), repository.getAnimeGenres().map { it.name })
-        coVerify(exactly = 2) { api.getAnimeGenres() }
     }
 
     @Test
-    fun `mutating returned genres does not corrupt the cached catalog`() = runTest {
-        coEvery { api.getAnimeGenres() } returns AnimeGenreListResponseDto(
-            data = listOf(
-                AnimeGenreDto(malId = 2, name = "Adventure", count = 20),
-                AnimeGenreDto(malId = 1, name = "Action", count = 30)
+    fun `mutating returned genres does not corrupt the cached snapshot`() = runTest {
+        withServer("""{"data":{"genres":["Adventure","Action"]}}""") { _, client ->
+            val repository = repository(client)
+            val exposed = repository.getAnimeGenres() as MutableList<AnimeGenre>
+            exposed[0] = AnimeGenre("Corrupted")
+
+            assertEquals(
+                listOf("Action", "Adventure"),
+                repository.getAnimeGenres().map { it.name }
             )
-        )
-
-        val exposedGenres = repository.getAnimeGenres() as MutableList<AnimeGenre>
-        exposedGenres[0] = AnimeGenre(name = "Corrupted")
-
-        assertEquals(listOf("Action", "Adventure"), repository.getAnimeGenres().map { it.name })
-        coVerify(exactly = 1) { api.getAnimeGenres() }
+        }
     }
 
     @Test(expected = IllegalStateException::class)
     fun `empty genre response is not accepted as a valid catalog`() = runTest {
-        coEvery { api.getAnimeGenres() } returns AnimeGenreListResponseDto(data = emptyList())
-
-        repository.getAnimeGenres()
+        withServer("""{"data":{"genres":[]}}""") { _, client ->
+            repository(client).getAnimeGenres()
+        }
     }
 
-    // --- helpers ---
+    private fun repository(client: ApolloClient) =
+        AnimeRepository(client, db, favoriteDao)
+
+    private suspend fun withServer(
+        vararg responseBodies: String,
+        block: suspend (MockServer, ApolloClient) -> Unit
+    ) {
+        val server = MockServer.Builder().build()
+        val client = ApolloClient.Builder().serverUrl(server.url()).build()
+        try {
+            responseBodies.forEach { body ->
+                server.enqueue(MockResponse.Builder().body(body).build())
+            }
+            block(server, client)
+        } finally {
+            client.close()
+            server.close()
+        }
+    }
+
+    private fun clientWith(interceptor: ApolloInterceptor): ApolloClient =
+        ApolloClient.Builder()
+            .serverUrl("https://example.test/graphql")
+            .addInterceptor(interceptor)
+            .build()
+
+    private fun detailResponse(title: String, includeErrors: Boolean = false): String =
+        """
+        {
+          "data": {
+            "Media": {
+              "__typename": "Media",
+              "id": 52991,
+              "title": {"english": "$title", "romaji": "Sousou no Frieren"},
+              "coverImage": {
+                "extraLarge": "https://example.com/frieren.jpg",
+                "large": "https://example.com/frieren-large.jpg"
+              },
+              "averageScore": 92,
+              "episodes": 28,
+              "format": "TV",
+              "seasonYear": 2023,
+              "description": "Fresh synopsis",
+              "genres": ["Adventure", "Fantasy"],
+              "studios": {"nodes": [{"name": "Madhouse"}]},
+              "status": "FINISHED",
+              "duration": 24,
+              "startDate": {"year": 2023, "month": 9, "day": 29},
+              "endDate": {"year": 2024, "month": 3, "day": 22},
+              "trailer": {"id": "trailer-id", "site": "youtube"},
+              "rankings": [{"rank": 1, "type": "RATED", "allTime": true}]
+            }
+          }
+          ${if (includeErrors) ""","errors":[{"message":"optional field failed"}]""" else ""}
+        }
+        """.trimIndent()
 
     private fun frieren() = Anime(
         id = 52991,
         title = "Sousou no Frieren",
         imageUrl = "https://example.com/frieren.jpg",
-        score = 9.27,
+        score = 9.2,
         episodes = 28,
         type = "TV",
         year = 2023,
@@ -286,31 +375,60 @@ class AnimeRepositoryTest {
         id = 52991,
         title = "Sousou no Frieren (cached)",
         imageUrl = "https://example.com/cached.jpg",
-        score = 9.27,
+        score = 9.2,
         episodes = 28,
         type = "TV",
         year = 2023,
-        synopsis = null,
-        genres = emptyList(),
-        studios = emptyList(),
-        aired = null,
-        status = null,
+        synopsis = "Cached synopsis",
+        genres = listOf("Fantasy"),
+        studios = listOf("Cached Studio"),
+        aired = "2023 - 2024",
+        status = "Finished",
         rating = null,
-        duration = null,
+        duration = "24 min per ep",
         rank = 1,
         trailerYoutubeId = null,
         pageIndex = 0
     )
 
-    private fun frierenDto() = AnimeDto(
-        malId = 52991,
-        title = "Sousou no Frieren",
-        type = "TV",
-        episodes = 28,
-        score = 9.27,
-        year = 2023,
-        images = AnimeImagesDto(
-            jpg = AnimeImageUrlsDto(imageUrl = "https://example.com/frieren.jpg")
-        )
+    private class CancellingInterceptor(
+        private val cancellation: CancellationException
+    ) : ApolloInterceptor {
+        override fun <D : Operation.Data> intercept(
+            request: ApolloRequest<D>,
+            chain: ApolloInterceptorChain
+        ): Flow<ApolloResponse<D>> = flow {
+            throw cancellation
+        }
+    }
+
+    private data class GatedGenres(
+        val genres: List<String>,
+        val started: CompletableDeferred<Unit>? = null,
+        val release: CompletableDeferred<Unit>? = null
     )
+
+    private class GenreGateInterceptor(
+        private val responses: ArrayDeque<GatedGenres>
+    ) : ApolloInterceptor {
+        var calls: Int = 0
+            private set
+
+        override fun <D : Operation.Data> intercept(
+            request: ApolloRequest<D>,
+            chain: ApolloInterceptorChain
+        ): Flow<ApolloResponse<D>> = flow {
+            calls += 1
+            val response = responses.removeFirst()
+            response.started?.complete(Unit)
+            response.release?.await()
+            @Suppress("UNCHECKED_CAST")
+            val data = GenreCollectionQuery.Data(response.genres) as D
+            emit(
+                ApolloResponse.Builder(request.operation, request.requestUuid)
+                    .data(data)
+                    .build()
+            )
+        }
+    }
 }
