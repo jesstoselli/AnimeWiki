@@ -1,7 +1,7 @@
 # Anime Wiki — AniList Backend Migration Design
 
 **Date:** 2026-07-28
-**Status:** Revised design; awaiting final review before implementation-plan rewrite
+**Status:** Approved; implementation plan rewritten
 **Product:** Anime Wiki Android app
 **Scope:** Feature parity migration of the current data backend from the Jikan REST API (unofficial MyAnimeList) to the AniList GraphQL API.
 
