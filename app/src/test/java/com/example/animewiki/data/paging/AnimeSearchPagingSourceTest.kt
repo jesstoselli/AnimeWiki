@@ -2,11 +2,21 @@ package com.example.animewiki.data.paging
 
 import androidx.paging.PagingSource
 import com.apollographql.apollo.ApolloClient
+import com.apollographql.apollo.api.ApolloRequest
+import com.apollographql.apollo.api.ApolloResponse
+import com.apollographql.apollo.api.Operation
+import com.apollographql.apollo.interceptor.ApolloInterceptor
+import com.apollographql.apollo.interceptor.ApolloInterceptorChain
 import com.apollographql.mockserver.MockResponse
 import com.apollographql.mockserver.MockServer
+import com.example.animewiki.data.remote.AniListGraphQlException
 import com.example.animewiki.domain.model.AnimeBrowseCriteria
 import com.example.animewiki.domain.model.AnimeFilters
 import com.example.animewiki.domain.model.AnimeFormat
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -20,6 +30,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class AnimeSearchPagingSourceTest {
     @Test
     fun `default filters send explicit false adult variable and omit blank search`() = runTest {
@@ -110,6 +121,55 @@ class AnimeSearchPagingSourceTest {
         }
     }
 
+    @Test
+    fun `append load delays 400 milliseconds in virtual time`() = runTest {
+        withServer(emptyPageResponse()) { _, client ->
+            val source = AnimeSearchPagingSource(client, AnimeBrowseCriteria.create())
+            val startedAt = testScheduler.currentTime
+
+            val result = source.load(append())
+
+            assertTrue(result is PagingSource.LoadResult.Page)
+            assertEquals(startedAt + 400, testScheduler.currentTime)
+        }
+    }
+
+    @Test
+    fun `cancellation from Apollo is propagated`() = runTest {
+        val cancellation = CancellationException("cancel search")
+        val client = ApolloClient.Builder()
+            .serverUrl("https://example.test/graphql")
+            .addInterceptor(CancellingInterceptor(cancellation))
+            .build()
+        try {
+            val thrown = try {
+                AnimeSearchPagingSource(client, AnimeBrowseCriteria.create()).load(refresh())
+                throw AssertionError("Expected cancellation to be propagated")
+            } catch (error: CancellationException) {
+                error
+            }
+
+            assertEquals("cancel search", thrown.message)
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun `non cancellation Apollo failure becomes load result error`() = runTest {
+        withServer("""{"errors":[{"message":"search unavailable"}]}""") { _, client ->
+            val result = AnimeSearchPagingSource(
+                client,
+                AnimeBrowseCriteria.create()
+            ).load(refresh())
+
+            assertTrue(result is PagingSource.LoadResult.Error)
+            val throwable = (result as PagingSource.LoadResult.Error).throwable
+            assertTrue(throwable is AniListGraphQlException)
+            assertEquals("search unavailable", throwable.message)
+        }
+    }
+
     private suspend fun withServer(
         responseBody: String,
         block: suspend (MockServer, ApolloClient) -> Unit
@@ -131,6 +191,12 @@ class AnimeSearchPagingSourceTest {
 
     private fun refresh(loadSize: Int = 25) = PagingSource.LoadParams.Refresh<Int>(
         key = null,
+        loadSize = loadSize,
+        placeholdersEnabled = false
+    )
+
+    private fun append(loadSize: Int = 25) = PagingSource.LoadParams.Append(
+        key = 2,
         loadSize = loadSize,
         placeholdersEnabled = false
     )
@@ -203,4 +269,15 @@ class AnimeSearchPagingSourceTest {
           }
         }
         """.trimIndent()
+
+    private class CancellingInterceptor(
+        private val cancellation: CancellationException
+    ) : ApolloInterceptor {
+        override fun <D : Operation.Data> intercept(
+            request: ApolloRequest<D>,
+            chain: ApolloInterceptorChain
+        ): Flow<ApolloResponse<D>> = flow {
+            throw cancellation
+        }
+    }
 }
