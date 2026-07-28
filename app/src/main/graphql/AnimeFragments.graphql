@@ -1,0 +1,28 @@
+fragment AnimeCardFields on Media {
+  id
+  title { english romaji }
+  coverImage { extraLarge large }
+  averageScore
+  episodes
+  format
+  seasonYear
+}
+
+fragment AnimeCacheFields on Media {
+  id
+  title { english romaji }
+  coverImage { extraLarge large }
+  averageScore
+  episodes
+  format
+  seasonYear
+  description(asHtml: false)
+  genres
+  studios { nodes { name } }
+  status
+  duration
+  startDate { year month day }
+  endDate { year month day }
+  trailer { id site }
+  rankings { rank type allTime }
+}

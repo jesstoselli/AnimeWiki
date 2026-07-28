@@ -1,0 +1,22 @@
+query SearchAnime(
+  $page: Int!,
+  $perPage: Int!,
+  $search: String,
+  $format: MediaFormat,
+  $genres: [String],
+  $isAdult: Boolean
+) {
+  Page(page: $page, perPage: $perPage) {
+    pageInfo { currentPage hasNextPage }
+    media(
+      type: ANIME,
+      search: $search,
+      format: $format,
+      genre_in: $genres,
+      isAdult: $isAdult,
+      sort: [SCORE_DESC]
+    ) {
+      ...AnimeCardFields
+    }
+  }
+}

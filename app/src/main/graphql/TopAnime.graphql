@@ -1,0 +1,8 @@
+query TopAnime($page: Int!, $perPage: Int!, $isAdult: Boolean) {
+  Page(page: $page, perPage: $perPage) {
+    pageInfo { currentPage hasNextPage }
+    media(type: ANIME, sort: [SCORE_DESC], isAdult: $isAdult) {
+      ...AnimeCacheFields
+    }
+  }
+}
