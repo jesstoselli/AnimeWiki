@@ -20,7 +20,7 @@ class LoadErrorTypeTest {
     fun `UnknownHostException is treated as no connection`() {
         assertEquals(
             LoadErrorType.NO_CONNECTION,
-            UnknownHostException("api.jikan.moe").toLoadErrorType()
+            UnknownHostException("graphql.anilist.co").toLoadErrorType()
         )
     }
 
