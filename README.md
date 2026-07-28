@@ -1,6 +1,9 @@
 # AnimeWiki 🌸
 
-> A modern Android sample app exploring the [Jikan API](https://jikan.moe/) (an unofficial MyAnimeList wrapper). Built around offline-first caching, reactive search, weekly background notifications, and a custom Material 3 design system.
+> A modern Android sample app exploring AniList's public GraphQL API. Its read-only
+> catalog features require no authentication. Built around offline-first caching,
+> reactive search, weekly background notifications, and a custom Material 3 design
+> system.
 
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?logo=kotlin&logoColor=white)
 ![Compose](https://img.shields.io/badge/Jetpack%20Compose-BOM%202026.04-4285F4?logo=jetpackcompose&logoColor=white)
@@ -46,7 +49,7 @@ https://github.com/user-attachments/assets/25c90d25-fa4a-48b1-a2e5-d2a1e1d17fef
 ## ✨ Features
 
 - **Top anime grid** with infinite scroll via Paging 3 + RemoteMediator
-- **Discover filters** for format, age rating, and multiple genres, combinable with the text query
+- **Discover filters** for format, adult-content inclusion, and multiple name-based genres, combinable with the text query
 - **Rich details screen** with synopsis, genres, studios, airing info, and score
 - **Reactive search** that debounces user input and swaps data sources on the fly
 - **Pull-to-refresh** on the main grid
@@ -67,7 +70,7 @@ https://github.com/user-attachments/assets/25c90d25-fa4a-48b1-a2e5-d2a1e1d17fef
 | UI | Jetpack Compose + Material 3 |
 | Navigation | Navigation Compose (with nested NavHost + deep links) |
 | DI | Hilt (via KSP, no KAPT) |
-| Networking | Retrofit 2 + OkHttp + Kotlinx Serialization |
+| Networking | Apollo Kotlin 5 + OkHttp |
 | Image loading | Coil 3 |
 | Paging | Paging 3 with `RemoteMediator` |
 | Local storage | Room 2.7 |
@@ -102,7 +105,7 @@ Layered, single-module, MVVM with a unidirectional data flow.
 │  └──────┬──────┘      └──────┬──────────────────┬────┘  │
 │         │                    │                  │       │
 │    ┌────▼────┐    ┌────▼─────┐    ┌────▼────┐    ┌──────▼──────┐ │
-│    │  Room   │    │ Retrofit │    │  Coil   │    │  DataStore  │ │
+│    │  Room   │    │  Apollo  │    │  Coil   │    │  DataStore  │ │
 │    └─────────┘    └──────────┘    └─────────┘    └─────────────┘ │
 └─────────────────────────────────────────────────────────┘
 
@@ -112,29 +115,36 @@ Layered, single-module, MVVM with a unidirectional data flow.
            └────────────┬────────────────────┘
                         ↓ uses Hilt-injected
            ┌─────────────────────────────────┐
-           │  JikanApi + NotificationHelper  │
+           │ ApolloClient + NotificationHelper│
            │  → posts notification with deep │
            │    link animewiki://details/{id}│
            └─────────────────────────────────┘
 ```
 
 - **The UI never talks to the network directly.** It observes `Flow<PagingData>` from the ViewModel.
-- **Room is the single source of truth for the top anime list.** `RemoteMediator` fills and refreshes it from the Jikan API.
+- **Room is the single source of truth for the Discover ranking.** `RemoteMediator` fills and refreshes it through Apollo 5 from AniList's GraphQL API.
 - **Search results are transient** (no caching) — a lightweight `PagingSource` fetches directly from the API.
 - **Favorites live in their own Room table** — a separate, reactive `Flow<List<Anime>>` so the cache layer can be invalidated without losing user data.
 - **DataStore** holds user preferences (theme mode, notification opt-in) and is observed at app boot to drive `AnimeWikiTheme` reactively.
-- **WorkManager** runs `TopAnimeSyncWorker` on a 7-day schedule, gated by `NetworkType.CONNECTED`. The Worker is `@HiltWorker`-annotated so it gets the same `JikanApi` and dependencies as the rest of the app.
+- **WorkManager** runs `TopAnimeSyncWorker` on a 7-day schedule, gated by `NetworkType.CONNECTED`. The Worker is `@HiltWorker`-annotated so it gets the same `ApolloClient` and dependencies as the rest of the app.
 
 ### Discover filters
 
 The former Top tab is now Discover. Its default ranking remains Room-backed and
-offline-first. Format, age-rating, and multi-genre filters can be combined with
-the text query; these filtered/search feeds are network-backed in R1. Genre
-metadata is cached for the lifetime of the app process.
+offline-first. Format and multi-genre filters can be combined with the text
+query; genres use the names returned by AniList, and these filtered/search feeds
+are network-backed in R1. Genre metadata is cached for the lifetime of the app
+process.
 
-Jikan depends on MyAnimeList and may return upstream 5xx/504 responses. Anime
-Wiki reports those as server problems; they do not imply that a selected filter
-is invalid.
+The adult toggle controls inclusion rather than switching between two exclusive
+catalogs. When disabled, requests send `isAdult = false` and exclude adult-only
+media. When enabled, the constraint is omitted, so results may include both
+adult and non-adult media.
+
+Read-only GraphQL queries retry HTTP 429 and 5xx responses up to three times.
+Rate-limit responses honor `Retry-After` or `X-RateLimit-Reset` when available;
+otherwise retries use exponential backoff with jitter. GraphQL and server
+failures are reported as server problems rather than as an offline state.
 
 ---
 
@@ -158,16 +168,25 @@ override suspend fun load(
     }
 
     return try {
-        val response = api.getTopAnime(page = page, limit = state.config.pageSize)
+        val response = apolloClient.query(
+            TopAnimeQuery(
+                page = page,
+                perPage = state.config.pageSize.coerceAtMost(25),
+                isAdult = Optional.present(false)
+            )
+        ).execute()
+        val pageData = response.dataOrAniListError().Page
         db.withTransaction {
             if (loadType == LoadType.REFRESH) {
                 db.remoteKeyDao().clearAll()
                 db.animeDao().clearAll()
             }
-            db.remoteKeyDao().upsertAll(/* ... */)
-            db.animeDao().upsertAll(/* ... */)
+            db.remoteKeyDao().upsertAll(/* AniList-id keys */)
+            db.animeDao().upsertAll(/* mapped pageData media */)
         }
-        MediatorResult.Success(endOfPaginationReached = !response.pagination.hasNextPage)
+        MediatorResult.Success(
+            endOfPaginationReached = pageData?.pageInfo?.hasNextPage != true
+        )
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
@@ -203,18 +222,26 @@ A `@HiltWorker` fetches the weekly #1 anime, posts a notification, and uses a de
 class TopAnimeSyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val api: JikanApi,
+    private val apolloClient: ApolloClient,
     private val notificationHelper: NotificationHelper
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        val top = api.getTopAnime(page = 1, limit = 1).data?.firstOrNull()
+        val top = apolloClient.query(
+            TopAnimeQuery(
+                page = 1,
+                perPage = 1,
+                isAdult = Optional.present(false)
+            )
+        ).execute().dataOrAniListError().Page?.media
+            .orEmpty()
+            .firstNotNullOfOrNull { it?.animeCacheFields?.toDomain() }
             ?: return Result.retry()
 
         notificationHelper.showWeeklyTopAnime(
-            animeId = top.malId,
-            title = top.titleEnglish ?: top.title,
-            score = "%.2f".format(top.score)
+            animeId = top.id,
+            title = top.title,
+            score = top.score?.let { "%.2f".format(it) } ?: "—"
         )
         return Result.success()
     }
@@ -305,7 +332,7 @@ The `autoCorrect = true` flag means most formatting fixes are applied in place; 
 app/src/main/java/com/example/animewiki/
 ├── data/
 │   ├── local/           # Room: entities, DAOs, converters, AppDatabase
-│   ├── remote/          # Retrofit + Kotlinx Serialization DTOs
+│   ├── remote/          # Apollo response handling + retry policy
 │   ├── paging/          # RemoteMediator + transient SearchPagingSource
 │   ├── mapper/          # DTO ↔ Entity ↔ Domain conversions
 │   ├── repository/      # Exposes Flow<PagingData> to the UI
@@ -340,13 +367,19 @@ cd animewiki
 
 Open in Android Studio Ladybug or newer, wait for the Gradle sync, and run on any emulator or device with **API 24+**.
 
-The Jikan API requires no authentication or API key.
+AniList's public, read-only GraphQL catalog requires no authentication or API key.
 
 To exercise the weekly notification flow without waiting until Monday, open **Settings → Notifications**, enable the toggle, then tap **Test notification now** — it enqueues a one-shot run of the same Worker.
 
 ---
 
 ## 🗺️ Roadmap
+
+The AniList migration replaces the backend and local identifier schema only. It
+does not add roadmap features. Because Room v3 intentionally uses a destructive
+migration, upgrading from the previous schema clears the old ranking cache and
+favorites; the Discover ranking repopulates from AniList on the next connected
+launch.
 
 - [x] Compose UI + Material 3 custom theme
 - [x] Paging 3 on the top anime grid
@@ -367,8 +400,7 @@ To exercise the weekly notification flow without waiting until Monday, open **Se
 
 ## 🙏 Credits
 
-- **Data**: [Jikan API v4](https://jikan.moe/) — unofficial MyAnimeList REST wrapper
-- **Posters & metadata**: © [MyAnimeList](https://myanimelist.net/) and respective rights holders
+- **Data, posters & metadata**: [AniList API](https://anilist.gitbook.io/anilist-apiv2-docs/) and respective rights holders
 - **Typeface**: [Quicksand](https://fonts.google.com/specimen/Quicksand) via Google Fonts
 
 ---
@@ -379,4 +411,4 @@ MIT. See [LICENSE](LICENSE) for details.
 
 ---
 
-<sub>Built as a learning / portfolio project. Not affiliated with MyAnimeList or Jikan.</sub>
+<sub>Built as a learning / portfolio project. Not affiliated with AniList.</sub>

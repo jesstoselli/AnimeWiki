@@ -995,7 +995,7 @@ git commit -m "refactor: remove Jikan backend"
 
 - Produces the releasable, verified migration branch.
 
-- [ ] **Step 1: Update README**
+- [x] **Step 1: Update README**
 
 Document:
 
@@ -1019,7 +1019,7 @@ Document:
 
 Expected: every command succeeds. If no device was available earlier, connect one now; do not mark this step complete without the instrumentation suite.
 
-- [ ] **Step 3: Run final source audits**
+- [x] **Step 3: Run final source audits**
 
 ```bash
 ! rg -n "Jikan|api\\.jikan|malId|idMal|AnimeAgeRating|adultContent" app/src/main README.md
@@ -1044,7 +1044,7 @@ Verify:
 8. A GraphQL/server failure is shown as server error, not offline.
 9. Weekly notification opens the AniList-id details route.
 
-- [ ] **Step 5: Commit documentation**
+- [x] **Step 5: Commit documentation**
 
 ```bash
 git add README.md docs/superpowers/plans/2026-07-28-anilist-migration.md
