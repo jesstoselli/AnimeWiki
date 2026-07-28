@@ -44,6 +44,8 @@ coroutines = "1.9.0"
 
 # Lint
 detekt = "1.23.7"
+apollo = "5.0.1"
+apolloMockServer = "0.0.1"
 
 # Tests
 coroutinesTest = "1.9.0"       # mesma versão das coroutines que você já tem
@@ -119,6 +121,11 @@ androidx-paging-compose = { module = "androidx.paging:paging-compose", version.r
 # Lint
 detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
 
+# Apollo
+apollo-runtime = { module = "com.apollographql.apollo:apollo-runtime", version.ref = "apollo" }
+apollo-testing-support = { module = "com.apollographql.apollo:apollo-testing-support", version.ref = "apollo" }
+apollo-mockserver = { module = "com.apollographql.mockserver:apollo-mockserver", version.ref = "apolloMockServer" }
+
 # Tests
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutinesTest" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
@@ -137,3 +144,4 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+apollo = { id = "com.apollographql.apollo", version.ref = "apollo" }

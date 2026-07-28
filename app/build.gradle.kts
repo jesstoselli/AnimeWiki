@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.apollo)
 }
 
 android {
@@ -73,6 +74,8 @@ kotlin {
 }
 
 dependencies {
+    implementation(libs.apollo.runtime)
+
     // Core + Compose
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
@@ -137,6 +140,8 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
     testImplementation(libs.mockk)
+    testImplementation(libs.apollo.testing.support)
+    testImplementation(libs.apollo.mockserver)
 
     // Instrumented tests (on device)
     androidTestImplementation(platform(libs.androidx.compose.bom))
@@ -151,6 +156,17 @@ dependencies {
     // Debug
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+apollo {
+    service("anilist") {
+        packageName.set("com.example.animewiki.graphql")
+        generateDataBuilders.set(true)
+        introspection {
+            endpointUrl.set("https://graphql.anilist.co")
+            schemaFile.set(file("src/main/graphql/schema.graphqls"))
+        }
+    }
 }
 
 detekt {
