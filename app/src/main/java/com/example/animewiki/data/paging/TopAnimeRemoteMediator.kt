@@ -93,15 +93,31 @@ class TopAnimeRemoteMediator internal constructor(
                 "page=$page returned ${resultPage.media?.size} items, hasNext=$hasNext"
             )
 
+            val rawMedia = resultPage.media.orEmpty()
             val baseIndex = if (loadType == LoadType.REFRESH) {
                 0
             } else {
                 db.animeDao().maxPageIndex() + 1
             }
-            val entities = resultPage.media.orEmpty()
+            val entities = rawMedia
                 .mapIndexedNotNull { i, media ->
                     media?.animeCacheFields?.toEntity(baseIndex + i)
                 }
+            val responseErrors = response.errors.orEmpty()
+            val unusablePage = entities.isEmpty() && (
+                responseErrors.isNotEmpty() ||
+                    rawMedia.isNotEmpty() ||
+                    hasNext
+                )
+            if (unusablePage) {
+                throw AniListGraphQlException(
+                    responseErrors.joinToString(separator = "; ") { it.message }
+                        .ifBlank { "AniList top response contained no usable media" }
+                )
+            }
+            if (loadType == LoadType.APPEND && entities.isEmpty()) {
+                return MediatorResult.Success(endOfPaginationReached = true)
+            }
 
             transaction {
                 if (loadType == LoadType.REFRESH) {
