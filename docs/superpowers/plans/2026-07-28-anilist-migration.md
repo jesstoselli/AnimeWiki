@@ -1007,7 +1007,7 @@ Document:
 - Intentional loss of old local data at Room v3.
 - No roadmap features added by this migration.
 
-- [ ] **Step 2: Run automated verification**
+- [x] **Step 2: Run automated verification**
 
 ```bash
 ./gradlew :app:testDebugUnitTest

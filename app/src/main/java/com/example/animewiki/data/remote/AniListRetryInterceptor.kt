@@ -57,8 +57,7 @@ class AniListRetryInterceptor(
             val document = (payload["query"] as? JsonPrimitive)
                 ?.takeIf { it.isString }
                 ?.content
-                ?: return false
-            document.trimStart().startsWith("query ")
+            document?.trimStart()?.startsWith("query ") == true
         } catch (_: IOException) {
             false
         } catch (_: SerializationException) {

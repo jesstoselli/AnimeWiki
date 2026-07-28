@@ -3,8 +3,6 @@ package com.example.animewiki.data.remote
 import com.apollographql.apollo.api.ApolloResponse
 import com.apollographql.apollo.api.Operation
 
-class AniListGraphQlException(message: String) : RuntimeException(message)
-
 fun <D : Operation.Data> ApolloResponse<D>.dataOrAniListError(): D {
     exception?.let { throw it }
     data?.let { return it }

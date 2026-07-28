@@ -37,5 +37,4 @@ class AnimeMapperTest {
         assertEquals(3, domain.rank)
         assertNull(domain.trailerYoutubeId)
     }
-
 }

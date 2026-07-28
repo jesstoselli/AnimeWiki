@@ -434,7 +434,8 @@ class AniListRetryInterceptorTest {
         val APPLICATION_JSON: MediaType = "application/json".toMediaType()
 
         const val APOLLO_QUERY_PAYLOAD: String =
-            """{"operationName":"GenreCollection","variables":{},"query":"query GenreCollection { genres: GenreCollection }"}"""
+            "{\"operationName\":\"GenreCollection\",\"variables\":{}," +
+                "\"query\":\"query GenreCollection { genres: GenreCollection }\"}"
 
         val TEST_REQUEST: Request = Request.Builder()
             .url("https://graphql.anilist.co")

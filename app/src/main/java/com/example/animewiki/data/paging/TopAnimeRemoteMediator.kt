@@ -48,32 +48,13 @@ class TopAnimeRemoteMediator internal constructor(
             "load() called: loadType=$loadType, stateItems=$stateSize, anchor=${state.anchorPosition}"
         )
 
-        val page = when (loadType) {
-            LoadType.REFRESH -> 1
-            LoadType.PREPEND -> {
-                Log.d("Mediator", "PREPEND → end")
-                return MediatorResult.Success(endOfPaginationReached = true)
-            }
-            LoadType.APPEND -> {
-                val lastItem = state.lastItemOrNull()
-                Log.d("Mediator", "APPEND → lastItem.id=${lastItem?.id}")
-                if (lastItem == null) {
-                    Log.d("Mediator", "APPEND → no lastItem, end")
-                    return MediatorResult.Success(endOfPaginationReached = true)
-                }
-                val key = db.remoteKeyDao().getKey(lastItem.id)
-                Log.d("Mediator", "APPEND → remoteKey=$key")
-                key?.nextKey ?: run {
-                    Log.d("Mediator", "APPEND → no nextKey, end")
-                    return MediatorResult.Success(endOfPaginationReached = true)
-                }
-            }
-        }
+        val page = resolvePage(loadType, state)
+            ?: return MediatorResult.Success(endOfPaginationReached = true)
 
         Log.d("Mediator", "Fetching page=$page")
 
         return try {
-            if (loadType == LoadType.APPEND) delay(400)
+            throttleAppend(loadType)
             val response = apolloClient.query(
                 TopAnimeQuery(
                     page = page,
@@ -94,11 +75,7 @@ class TopAnimeRemoteMediator internal constructor(
             )
 
             val rawMedia = resultPage.media.orEmpty()
-            val baseIndex = if (loadType == LoadType.REFRESH) {
-                0
-            } else {
-                db.animeDao().maxPageIndex() + 1
-            }
+            val baseIndex = resolveBaseIndex(loadType)
             val entities = rawMedia
                 .mapIndexedNotNull { i, media ->
                     media?.animeCacheFields?.toEntity(baseIndex + i)
@@ -142,6 +119,38 @@ class TopAnimeRemoteMediator internal constructor(
         } catch (e: Exception) {
             Log.e("Mediator", "Load failed", e)
             MediatorResult.Error(e)
+        }
+    }
+
+    private suspend fun resolveBaseIndex(loadType: LoadType): Int =
+        if (loadType == LoadType.REFRESH) 0 else db.animeDao().maxPageIndex() + 1
+
+    private suspend fun throttleAppend(loadType: LoadType) {
+        if (loadType == LoadType.APPEND) delay(400)
+    }
+
+    private suspend fun resolvePage(
+        loadType: LoadType,
+        state: PagingState<Int, AnimeEntity>
+    ): Int? = when (loadType) {
+        LoadType.REFRESH -> 1
+        LoadType.PREPEND -> {
+            Log.d("Mediator", "PREPEND → end")
+            null
+        }
+        LoadType.APPEND -> {
+            val lastItem = state.lastItemOrNull()
+            Log.d("Mediator", "APPEND → lastItem.id=${lastItem?.id}")
+            if (lastItem == null) {
+                Log.d("Mediator", "APPEND → no lastItem, end")
+                null
+            } else {
+                val key = db.remoteKeyDao().getKey(lastItem.id)
+                Log.d("Mediator", "APPEND → remoteKey=$key")
+                key?.nextKey.also { nextKey ->
+                    if (nextKey == null) Log.d("Mediator", "APPEND → no nextKey, end")
+                }
+            }
         }
     }
 }

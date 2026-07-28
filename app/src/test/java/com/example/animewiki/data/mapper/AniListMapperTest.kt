@@ -1,5 +1,7 @@
 package com.example.animewiki.data.mapper
 
+import com.example.animewiki.data.local.entity.AnimeEntity
+import com.example.animewiki.domain.model.Anime
 import com.example.animewiki.graphql.AnimeDetailsQuery
 import com.example.animewiki.graphql.SearchAnimeQuery
 import com.example.animewiki.graphql.builder.Data
@@ -26,18 +28,20 @@ class AniListMapperTest {
 
     @Test
     fun `uses nonblank fallbacks and rescales score`() {
-        val anime = requireNotNull(cardFragment {
-            id = 154587
-            title = buildMediaTitle {
-                english = " "
-                romaji = "Sousou no Frieren"
-            }
-            coverImage = buildMediaCoverImage {
-                extraLarge = ""
-                large = "https://img.example/frieren.jpg"
-            }
-            averageScore = 91
-        }.toDomain())
+        val anime = requireNotNull(
+            cardFragment {
+                id = 154587
+                title = buildMediaTitle {
+                    english = " "
+                    romaji = "Sousou no Frieren"
+                }
+                coverImage = buildMediaCoverImage {
+                    extraLarge = ""
+                    large = "https://img.example/frieren.jpg"
+                }
+                averageScore = 91
+            }.toDomain()
+        )
 
         assertEquals("Sousou no Frieren", anime.title)
         assertEquals("https://img.example/frieren.jpg", anime.imageUrl)
@@ -48,13 +52,19 @@ class AniListMapperTest {
     fun `rejects blank required title and image`() {
         val noTitle = cardFragment {
             id = 1
-            title = buildMediaTitle { english = " "; romaji = "" }
+            title = buildMediaTitle {
+                english = " "
+                romaji = ""
+            }
             coverImage = buildMediaCoverImage { large = "https://img.example/1.jpg" }
         }
         val noImage = cardFragment {
             id = 2
             title = buildMediaTitle { english = "Valid" }
-            coverImage = buildMediaCoverImage { extraLarge = " "; large = "" }
+            coverImage = buildMediaCoverImage {
+                extraLarge = " "
+                large = ""
+            }
         }
 
         assertNull(noTitle.toDomain())
@@ -89,20 +99,48 @@ class AniListMapperTest {
             }
             status = MediaStatus.FINISHED
             duration = 24
-            startDate = buildFuzzyDate { year = 2023; month = 10; day = 4 }
-            endDate = buildFuzzyDate { year = 2024; month = 3; day = 22 }
+            startDate = buildFuzzyDate {
+                year = 2023
+                month = 10
+                day = 4
+            }
+            endDate = buildFuzzyDate {
+                year = 2024
+                month = 3
+                day = 22
+            }
             rankings = listOf(
                 null,
-                buildMediaRank { rank = 4; type = MediaRankType.POPULAR; allTime = true },
-                buildMediaRank { rank = 3; type = MediaRankType.RATED; allTime = false },
-                buildMediaRank { rank = 1; type = MediaRankType.RATED; allTime = true }
+                buildMediaRank {
+                    rank = 4
+                    type = MediaRankType.POPULAR
+                    allTime = true
+                },
+                buildMediaRank {
+                    rank = 3
+                    type = MediaRankType.RATED
+                    allTime = false
+                },
+                buildMediaRank {
+                    rank = 1
+                    type = MediaRankType.RATED
+                    allTime = true
+                }
             )
-            trailer = buildMediaTrailer { id = "abc123"; site = "YouTube" }
+            trailer = buildMediaTrailer {
+                id = "abc123"
+                site = "YouTube"
+            }
         }
 
         val anime = requireNotNull(fragment.toDomain())
         val entity = requireNotNull(fragment.toEntity(pageIndex = 8))
 
+        assertMappedDetails(anime)
+        assertCachedEntity(anime, entity)
+    }
+
+    private fun assertMappedDetails(anime: Anime) {
         assertEquals(154587, anime.id)
         assertEquals("Frieren: Beyond Journey's End", anime.title)
         assertEquals("https://img.example/frieren.jpg", anime.imageUrl)
@@ -119,7 +157,9 @@ class AniListMapperTest {
         assertEquals("24 min per ep", anime.duration)
         assertEquals(1, anime.rank)
         assertEquals("abc123", anime.trailerYoutubeId)
+    }
 
+    private fun assertCachedEntity(anime: Anime, entity: AnimeEntity) {
         assertEquals(anime.id, entity.id)
         assertEquals(anime.title, entity.title)
         assertEquals(anime.imageUrl, entity.imageUrl)
@@ -141,20 +181,24 @@ class AniListMapperTest {
 
     @Test
     fun `uses season year or start year and formats year-only range compactly`() {
-        val startYearFallback = requireNotNull(cacheFragment {
-            id = 1
-            title = buildMediaTitle { english = "Start year" }
-            coverImage = buildMediaCoverImage { large = "https://img.example/1.jpg" }
-            startDate = buildFuzzyDate { year = 2023 }
-            endDate = buildFuzzyDate { year = 2024 }
-        }.toDomain())
-        val explicitSeasonYear = requireNotNull(cacheFragment {
-            id = 2
-            title = buildMediaTitle { english = "Season year" }
-            coverImage = buildMediaCoverImage { large = "https://img.example/2.jpg" }
-            seasonYear = 2025
-            startDate = buildFuzzyDate { year = 2023 }
-        }.toDomain())
+        val startYearFallback = requireNotNull(
+            cacheFragment {
+                id = 1
+                title = buildMediaTitle { english = "Start year" }
+                coverImage = buildMediaCoverImage { large = "https://img.example/1.jpg" }
+                startDate = buildFuzzyDate { year = 2023 }
+                endDate = buildFuzzyDate { year = 2024 }
+            }.toDomain()
+        )
+        val explicitSeasonYear = requireNotNull(
+            cacheFragment {
+                id = 2
+                title = buildMediaTitle { english = "Season year" }
+                coverImage = buildMediaCoverImage { large = "https://img.example/2.jpg" }
+                seasonYear = 2025
+                startDate = buildFuzzyDate { year = 2023 }
+            }.toDomain()
+        )
 
         assertEquals(2023, startYearFallback.year)
         assertEquals("2023 - 2024", startYearFallback.aired)
@@ -177,13 +221,15 @@ class AniListMapperTest {
         )
 
         cases.forEachIndexed { index, (format, status, expected) ->
-            val anime = requireNotNull(cacheFragment {
-                id = index + 1
-                title = buildMediaTitle { english = "Anime $index" }
-                coverImage = buildMediaCoverImage { large = "https://img.example/$index.jpg" }
-                this.format = format
-                this.status = status
-            }.toDomain())
+            val anime = requireNotNull(
+                cacheFragment {
+                    id = index + 1
+                    title = buildMediaTitle { english = "Anime $index" }
+                    coverImage = buildMediaCoverImage { large = "https://img.example/$index.jpg" }
+                    this.format = format
+                    this.status = status
+                }.toDomain()
+            )
 
             assertEquals(expected.first, anime.type)
             assertEquals(expected.second, anime.status)
@@ -192,12 +238,17 @@ class AniListMapperTest {
 
     @Test
     fun `keeps trailer id only for YouTube`() {
-        val anime = requireNotNull(cacheFragment {
-            id = 1
-            title = buildMediaTitle { english = "Trailer" }
-            coverImage = buildMediaCoverImage { large = "https://img.example/trailer.jpg" }
-            trailer = buildMediaTrailer { id = "other-site"; site = "dailymotion" }
-        }.toDomain())
+        val anime = requireNotNull(
+            cacheFragment {
+                id = 1
+                title = buildMediaTitle { english = "Trailer" }
+                coverImage = buildMediaCoverImage { large = "https://img.example/trailer.jpg" }
+                trailer = buildMediaTrailer {
+                    id = "other-site"
+                    site = "dailymotion"
+                }
+            }.toDomain()
+        )
 
         assertNull(anime.trailerYoutubeId)
     }
