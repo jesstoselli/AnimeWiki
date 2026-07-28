@@ -1,7 +1,7 @@
 # Anime Wiki — AniList Backend Migration Design
 
 **Date:** 2026-07-28
-**Status:** Approved design; implementation plan to be written next
+**Status:** Revised design; awaiting final review before implementation-plan rewrite
 **Product:** Anime Wiki Android app
 **Scope:** Feature parity migration of the current data backend from the Jikan REST API (unofficial MyAnimeList) to the AniList GraphQL API.
 
@@ -25,18 +25,19 @@ These were agreed during brainstorming and are fixed for this migration:
 1. **Scope:** feature parity only. No new screens or roadmap features.
 2. **GraphQL client:** Apollo Kotlin (typed codegen from the schema + `.graphql` operations, backed by OkHttp).
 3. **Offline cache:** keep Room. Apollo is the network layer only. Room continues to store favorites and the offline-first ranking cache; the existing `RemoteMediator` is preserved and simply fed by Apollo.
-4. **Age rating:** AniList has no MAL-style rating (G/PG/PG-13/R+/Rx). The R1 age-rating filter is replaced by a single **"adult content" toggle** mapped to AniList's `isAdult`.
-5. **Execution:** big-bang swap behind the domain seam, on a branch. The domain models and `AnimeRepository` shape stay stable; only `data/remote` (and the filter domain/UI touched by decisions 4 and the genre change) changes.
-6. **Canonical id / favorites continuity:** adopt the **AniList `Media.id`** as the canonical id (always present, no cross-namespace collision), plus a **one-time favorites migration** keyed on `idMal` (see §6.3).
+4. **Content maturity:** AniList has no MAL-style rating (G/PG/PG-13/R+/Rx). The R1 age-rating selector is replaced by **"include adult content"**. Off sends `isAdult: false`; on omits `isAdult`, allowing both adult and non-adult results. It never sends `isAdult: true`, which would mean "adult-only". The same policy applies to ranking and search.
+5. **Execution:** the release is an atomic backend swap behind the domain seam, developed incrementally on a branch. Jikan remains available only to keep intermediate commits compiling and is removed before merge. No mixed-provider build is shipped.
+6. **Canonical id / favorites continuity:** adopt the **AniList `Media.id`** as the canonical id (always present, no cross-namespace collision), plus a **crash-safe, one-time favorites migration** keyed on `idMal` (see §6.3).
+7. **Legacy ranking cache:** the existing `anime` and `remote_keys` rows use MAL ids and are not valid under the new canonical-id namespace. They are cleared atomically once before the AniList-backed ranking is exposed. This is a one-time provider-boundary invalidation, not a normal failed-refresh cache replacement.
 
 ## 4. Constraints and principles
 
 - AniList is read-only for this app; favorites and personal state stay local (Room).
-- Respect AniList's rate limit (~90 requests/minute plus a short-window burst limiter that responds with HTTP 429). Prefer single combined queries over many small ones; request only the fields the UI renders.
+- Respect the limit advertised by AniList response headers. The documented normal limit is 90 requests/minute, but AniList may temporarily lower it (currently 30 requests/minute) and also applies a burst limiter. Prefer combined/batched queries, honor `Retry-After` and `X-RateLimit-Reset`, and request only fields the app uses.
 - GraphQL fields are nullable by nature. Malformed or incomplete entries must be skipped without discarding valid siblings (same tolerance discipline already applied to the Jikan DTOs).
-- The default ranking remains offline-first through the existing Room cache; a failed refresh never replaces valid cached content with an empty result.
+- The default ranking remains offline-first through Room after the one-time legacy-cache invalidation; a failed AniList refresh never replaces valid AniList-backed cached content with an empty result.
 - Filtered/search feeds remain network-backed (as in R1).
-- The Room schema does not change: AniList values are mapped to fit the current `AnimeEntity`/`FavoriteEntity` columns, so no Room migration is required (except the favorites id rewrite in §6.3, which is a data migration, not a schema change).
+- The Room schema does not change. AniList values fit the current entities; provider transition state and the prepared favorites migration plan live in Preferences DataStore.
 - Every behavior change follows red-green TDD; before handoff, run the full unit suite, compile the app, run Detekt, and validate the flows on a device or emulator.
 
 ## 5. Architecture and seam
@@ -48,18 +49,22 @@ UI (Compose)  →  TopAnimeViewModel  →  AnimeRepository  ── stable seam �
                                                                          │
         ┌──────────────── below the seam: this migration ───────────────┘
         │
-  Apollo (AniList)  ─┬─→  TopAnimeRemoteMediator  →  Room (AnimeEntity)  [offline-first ranking]
-                     ├─→  AnimeSearchPagingSource  →  domain            [network-backed search/filters]
-                     ├─→  getAnimeDetails(id)       →  domain
-                     └─→  getAnimeGenres()          →  in-memory cache
-  Room (favorites)  ── unchanged, local only ──
+  Apollo (AniList) → response policy ─┬─→ TopAnimeRemoteMediator → Room  [offline-first ranking]
+                                      ├─→ AnimeSearchPagingSource         [network-backed search/filters]
+                                      ├─→ getAnimeDetails(id)
+                                      └─→ getAnimeGenres() → memory cache
+  Provider transition coordinator ────┬─→ invalidate legacy ranking cache
+                                      └─→ prepare/apply favorites migration
+  Room (favorites) ─────────────────────→ local-only after id migration
 ```
 
 `AnimeRepository` keeps its method shapes:
 - `topAnime(): Flow<PagingData<Anime>>`
 - `searchAnime(criteria: AnimeBrowseCriteria): Flow<PagingData<Anime>>`
-- `getAnimeDetails(id: Int): Anime`
+- `getAnimeDetails(id: Int): Anime?`
 - `getAnimeGenres(forceRefresh: Boolean = false): List<AnimeGenre>`
+
+Apollo responses are interpreted in one shared policy before repositories and paging components consume them. The policy distinguishes transport failures (`response.exception`), GraphQL failures (`response.errors`), and usable data. Partial data is accepted when the operation still contains valid sibling items; an operation with no usable data is a server failure.
 
 ## 6. Components
 
@@ -68,28 +73,33 @@ UI (Compose)  →  TopAnimeViewModel  →  AnimeRepository  ── stable seam �
 - Apollo Gradle plugin and `com.apollographql.apollo:apollo-runtime` in the version catalog and `app/build.gradle.kts`.
 - AniList `schema.graphqls` (downloaded via the Apollo plugin) under the configured Apollo service directory.
 - GraphQL operations:
-  - `TopAnime.graphql` — `Page.media(type: ANIME, sort: SCORE_DESC)` with pagination.
+  - `TopAnime.graphql` — `Page.media(type: ANIME, sort: SCORE_DESC)` with pagination and the complete field set persisted in `AnimeEntity`, so opening a cached ranking item offline retains today's detail parity.
   - `SearchAnime.graphql` — `Page.media(type: ANIME, search:, format:, genre_in:, isAdult:, sort:)`.
   - `AnimeDetails.graphql` — `Media(id:, type: ANIME)` with the full field set the details screen renders.
-  - `GenreCollection.graphql` — `GenreCollection` (returns `[String]`).
+  - `GenreCollection.graphql` — aliases the schema field as `genres: GenreCollection` (returns `[String]`).
+  - `FavoritesByMalIds.graphql` — `Page.media(idMal_in:, type: ANIME)` in batches of at most 50.
 - `di/AniListModule.kt` — provides `ApolloClient` built on an OkHttp client with the logging interceptor and the retry/backoff interceptor (§8).
 - Mappers from Apollo-generated types to domain (`Anime`, `AnimeGenre`) and to `AnimeEntity`.
 - `RetryInterceptor` (OkHttp) — retries HTTP 429 and 5xx with exponential backoff; unit-tested.
-- A one-time favorites migration component (§6.3).
+- A shared Apollo response policy that handles transport exceptions, GraphQL errors, partial data, and missing usable data consistently.
+- A provider-transition coordinator, Preferences DataStore state, and WorkManager job for the one-time cache/favorites migrations (§6.3).
 - HTML-stripping helper for AniList `description` (§6.2).
 
 ### 6.2 Modify
 
 - `data/repository/AnimeRepository.kt` — call AniList through Apollo; keep the Room `Pager` + `RemoteMediator` for the ranking and the network-backed search `PagingSource`.
 - `data/paging/TopAnimeRemoteMediator.kt` and `data/paging/AnimeSearchPagingSource.kt` — fetch via Apollo; map results; skip invalid entries.
-- `domain/model/AnimeFilters.kt` — `genreIds: Set<Int>` → `genres: Set<String>`; remove `rating: AnimeAgeRating`; add `adultContent: Boolean` (default `false`). Update `activeCount`, `isEmpty`, and the criteria/query building accordingly.
+- `domain/model/AnimeFilters.kt` — `genreIds: Set<Int>` → `genres: Set<String>`; remove `rating: AnimeAgeRating`; add `includeAdultContent: Boolean` (default `false`). Update `activeCount`, `isEmpty`, and criteria/query translation accordingly.
 - `domain/model/AnimeGenre.kt` — identified by name (AniList `GenreCollection` returns only names; no id/count).
 - `domain/model/AnimeFormat.kt` — `apiValue` becomes the AniList `MediaFormat` wire value (`TV`, `MOVIE`, `OVA`, `ONA`, `SPECIAL`, `MUSIC`).
-- `domain/model/AnimeAgeRating.kt` — **removed** (replaced by the `adultContent` boolean).
+- `domain/model/AnimeAgeRating.kt` — **removed** (replaced by the `includeAdultContent` boolean).
 - `ui/screens/topAnime/components/AnimeFilterSheet.kt`, `AnimeFilterBar.kt`, `AnimeFilterLabels.kt` — replace the rating selector with the adult-content toggle; genre selection keyed by name.
-- `ui/screens/topAnime/TopAnimeViewModel.kt` — filter state uses `adultContent` and string genres; behavior otherwise unchanged.
+- `ui/screens/topAnime/TopAnimeViewModel.kt` — filter state uses `includeAdultContent` and string genres; behavior otherwise unchanged.
 - `data/notification/TopAnimeSyncWorker.kt` — fetch the #1 anime via the AniList top query.
-- `di/NetworkModule.kt` — provide `ApolloClient`; remove Retrofit/Jikan providers.
+- `AnimeWikiApp.kt` — start the provider transition and enqueue retryable favorites migration work before legacy ids can be interpreted as AniList ids.
+- `data/preferences/repository/UserPreferencesRepository.kt` (or a focused provider-transition preference wrapper over the same DataStore) — persist `NotStarted`, `Prepared`, and `Completed` migration state.
+- Favorites UI/actions — while a legacy favorites migration is pending, existing rows remain visible but opening or mutating them is temporarily guarded so a MAL id can never be interpreted as an AniList id.
+- `di/NetworkModule.kt` — remove Retrofit/Jikan providers after the Apollo cutover.
 - `data/mapper/AnimeMapper.kt`, `AnimeGenreMapper.kt` — map from Apollo types; keep the entity mapping for Room.
 - `res/values/strings.xml`, `res/values-en/strings.xml` — adult-content toggle labels; remove age-rating strings.
 - `README.md` — document the AniList backend and the parity scope.
@@ -99,8 +109,8 @@ UI (Compose)  →  TopAnimeViewModel  →  AnimeRepository  ── stable seam �
 | Domain field | AniList `Media` source | Note |
 |---|---|---|
 | `id` | `id` | Canonical id is the AniList id. |
-| `title` | `title.english ?: title.romaji` | Fall back to romaji when English is absent. |
-| `imageUrl` | `coverImage.extraLarge ?: coverImage.large` | |
+| `title` | first non-blank of `title.english`, `title.romaji` | Reject the item if both are null or blank. |
+| `imageUrl` | first non-blank of `coverImage.extraLarge`, `coverImage.large` | Reject the item if both are null or blank. |
 | `score` (0–10 Double) | `averageScore` (0–100 Int) | Divide by 10.0; null → null. |
 | `episodes` | `episodes` | |
 | `type` | `format` (`MediaFormat`) | Map enum to display string. |
@@ -113,59 +123,86 @@ UI (Compose)  →  TopAnimeViewModel  →  AnimeRepository  ── stable seam �
 | `duration` | `duration` (minutes) | Format to the existing display string. |
 | `rank` | `rankings` (rated, allTime) | Optional; null when absent. |
 | `trailerYoutubeId` | `trailer { id site }` | Use `id` only when `site == "youtube"`. |
+| `rating` | no equivalent field | Store null; the existing optional details row is omitted. Content maturity remains available through `isAdult` for filtering only. |
 
-**Top ranking:** Jikan `/top/anime` is replaced by `Page.media(type: ANIME, sort: SCORE_DESC)`, which mirrors a highest-rated ranking.
+**Top ranking:** Jikan `/top/anime` is replaced by `Page.media(type: ANIME, sort: SCORE_DESC)`, which mirrors a highest-rated ranking. Its reusable cache/detail fragment includes every field currently persisted by `TopAnimeRemoteMediator` that AniList can supply (`synopsis`, genres, studios, aired dates, status, duration, rank, and trailer), not only card fields.
 
-**Search + filters:** `media(type: ANIME, search: $q, format: $format, genre_in: $genres, isAdult: $adult, sort: SCORE_DESC)`. The `search` argument is omitted when the query is blank (filter-only browse); each filter argument is omitted when unset.
+**Search + filters:** `media(type: ANIME, search: $q, format: $format, genre_in: $genres, isAdult: $adult, sort: SCORE_DESC)`. The `search` argument is omitted when the query is blank (filter-only browse); each optional filter is omitted when unset. With adult content disabled, `$adult` is `false`; with it enabled, the `isAdult` argument itself is omitted. Ranking follows the same rule.
 
 **Pagination:** AniList wraps lists in `Page { pageInfo { currentPage, lastPage, hasNextPage, total } media { ... } }`. `hasNextPage` drives the paging `nextKey`, exactly as the current `pagination.has_next_page` does.
 
-**Favorites continuity (one-time migration):** existing `FavoriteEntity` rows are keyed by MAL id. On the first launch of the migrated build, for each existing favorite the app queries `Media(idMal: <oldId>, type: ANIME) { id title ... }`, rewrites the row with the AniList id and refreshed denormalized fields, and marks the migration done via a DataStore flag. Favorites whose `idMal` is not found on AniList are dropped. If the device is offline at first launch, the migration is deferred and retried on a later launch (the flag is only set once it completes). New favorites always use the AniList id.
+**Legacy ranking cache invalidation:** before an AniList-backed ranking is exposed, a one-time Room transaction clears `anime` and `remote_keys`. Those rows contain MAL ids and cannot be safely reused in the AniList namespace. Favorites are excluded from this clear. Transition state prevents the invalidation from repeating during normal refreshes.
+
+**Favorites continuity (one-time migration):** existing `FavoriteEntity` rows are keyed by MAL id. Migration uses a persisted, resumable state machine:
+
+1. `NotStarted`: snapshot all legacy favorites and request AniList mappings in `idMal_in` batches of at most 50. All batches must complete successfully before Room is changed. A transport or GraphQL failure leaves favorites untouched and causes WorkManager to retry.
+2. `Prepared`: persist a serialized migration plan in Preferences DataStore containing the old ids, complete replacement rows keyed by AniList id, and ids confirmed absent from AniList. Then apply the plan in one Room transaction: delete old ids that are not also target AniList ids and upsert all replacements. This ordering is collision-safe when a numeric MAL id equals another title's AniList id.
+3. `Completed`: only after the Room transaction commits, mark completion and clear the prepared payload. If the process dies after the Room commit but before this state update, reapplying the same prepared plan is idempotent.
+
+Favorites confirmed absent by a successful AniList response are dropped, matching the accepted continuity policy. An offline or failed request is never treated as "not found". New installs and installations with no favorites transition directly to `Completed`. Until completion, legacy favorites may remain visible, but navigation and mutations that would interpret their ids are guarded and communicate that synchronization is pending.
 
 ### 6.4 Remove
 
 - `data/remote/JikanApi.kt` and `data/remote/dto/*` (Jikan DTOs).
 - Retrofit / kotlinx-serialization-converter dependencies, once no code references them. (kotlinx.serialization may remain if still used elsewhere; Retrofit is removed.)
 
-Room entities, DAOs, and the favorites feature are otherwise unchanged.
+The Room schema remains unchanged, but `FavoriteDao` gains snapshot/batch operations and a transactional migration method. The user-facing favorites behavior is otherwise unchanged after transition completion.
 
 ## 7. Error handling
 
-- Extend the existing `ui/common/LoadErrorType.toLoadErrorType()` classifier to Apollo exceptions: `ApolloNetworkException` (wrapping `IOException`) → `NO_CONNECTION`; GraphQL errors and non-2xx HTTP → `SERVER`. The offline/server banner and full-screen states from the previous work remain unchanged.
-- Mapping is tolerant: mappers return null for entries missing an essential field (id, title, or image) and those are filtered out, never crashing a whole page.
+- A shared response policy inspects every Apollo response. `response.exception` represents transport/protocol failure; `response.errors` represents GraphQL field errors. Valid partial data may be consumed and invalid siblings skipped, but errors with no usable operation data become a typed server failure.
+- Extend the existing `ui/common/LoadErrorType.toLoadErrorType()` classifier: `ApolloNetworkException` (wrapping `IOException`) → `NO_CONNECTION`; typed GraphQL/HTTP/protocol failures → `SERVER`. The offline/server banner and full-screen states remain unchanged.
+- Mapping is tolerant: mappers return null for entries missing an essential field (id, non-blank title, or non-blank image) and those entries are filtered out without crashing a whole page.
 
 ## 8. Rate limiting and retry
 
-- Add a `RetryInterceptor` to the OkHttp client that backs Apollo. It retries HTTP **429** and **5xx** with exponential backoff (base 1s, doubling, capped at 3 retries), closing each intermediate response. Only idempotent GET/POST-query traffic is involved (AniList is read-only here), so retries are safe.
-- This is the retry/backoff resilience previously discussed, placed at the correct layer for AniList's burst limiter.
+- Add a `RetryInterceptor` to the OkHttp client that backs Apollo. It retries HTTP **429** and retryable **5xx** responses, closing every intermediate response. For 429 it honors `Retry-After` first and `X-RateLimit-Reset` when present; otherwise it uses exponential backoff with jitter (base 1s, capped at 3 retries). Retryable 5xx responses use the same bounded fallback.
+- Only read-only GraphQL queries are retried. Batching favorites and keeping query field sets focused reduce request pressure before retry is needed.
+- AniList may temporarily lower or suspend its normal capacity, so code must use server-provided timing rather than assuming 90 requests/minute.
 
 ## 9. Testing strategy
 
 Red-green TDD throughout. Focused tests per unit:
 
-- **Mappers:** Apollo type → domain and → `AnimeEntity`, with fixtures for null/missing fields and HTML in `description`. Use Apollo's generated test/data builders.
-- **Queries / PagingSource:** Apollo `MockServer` (or `TestNetworkTransport`) asserting the outgoing variables (`search`, `format`, `genre_in`, `isAdult`, `page`) and pagination (`hasNextPage` → `nextKey`).
+- **Apollo contract spike (Task 0):** before production implementation, prove the Apollo 5 Gradle schema task, generated accessors/data builders, and the current mock-server or `TestNetworkTransport` artifact/API in a minimal test. This removes version/API assumptions from the implementation plan.
+- **Mappers:** Apollo type → domain and → `AnimeEntity`, with fixtures for null/blank required fields and HTML in `description`. Verify that the top-ranking mapping preserves every field currently available from the Room-backed details flow.
+- **Response policy:** data-only success, usable partial data plus GraphQL errors, errors with no usable data, and `response.exception`.
+- **Queries / PagingSource:** the proven Apollo test transport asserts outgoing variables (`search`, `format`, `genre_in`, `isAdult`, `page`), argument omission when adult content is included, and pagination (`hasNextPage` → `nextKey`).
 - **Repository:** genre catalog mapping and in-memory cache; criteria → query-variable translation; favorites migration by `idMal` (found, not-found, offline-deferred).
-- **ViewModel:** filter state with string genres and the adult-content toggle; existing query/debounce behavior preserved.
+- **Provider transition:** legacy ranking rows are atomically invalidated once; favorites batching, prepared-state persistence, collision-safe transaction, retry after transport/GraphQL failure, resume after process death at each boundary, idempotent reapplication, confirmed-not-found handling, and the temporary UI interaction guard.
+- **ViewModel:** filter state with string genres and `includeAdultContent`; existing query/debounce behavior preserved.
 - **Error classifier:** Apollo exceptions → `LoadErrorType`.
-- **Retry interceptor:** success passthrough, retry-then-success, give-up after max retries, exponential delays, non-retryable status passthrough, 429 retried.
-- **Verification:** automated tests use `MockServer`; a manual smoke test runs against the live (auth-free) AniList API and on an emulator.
+- **Retry interceptor:** success passthrough, retry-then-success, give-up after max retries, non-retryable status passthrough, response closing, `Retry-After`, `X-RateLimit-Reset`, and jittered fallback.
+- **Verification:** automated tests use the transport proven by Task 0; a manual smoke test runs against the live (auth-free) AniList API and on an emulator.
 
 ## 10. Scope boundaries (out of scope)
 
 - No roadmap features (R2–R11): no manga, voice actors, relations, recommendations, characters/staff, episodes, streaming, seasons, or roulette. These get their own specs later and will benefit from AniList's richer graph.
 - No Apollo normalized cache adoption; Room remains the cache/persistence layer.
 - No account login / AniList OAuth; favorites stay local.
-- No UI redesign; the filter sheet changes only where the rating selector becomes the adult-content toggle and genres become name-based.
+- No UI redesign; UI changes are limited to the adult-content toggle, name-based genres, and the transient favorites-migration guard required for id safety.
+- No second-provider fallback. This migration removes the known Jikan dependency and keeps the domain seam replaceable, but no external provider can guarantee permanent availability.
 
 ## 11. Risks and notes
 
 - **Ranking definition shift:** AniList `SCORE_DESC` is not identical to MAL's top ranking, so the exact order of the Discover list will differ. This is expected and acceptable at parity.
 - **`description` HTML:** AniList descriptions contain HTML/markup; the strip helper must be covered by tests to avoid leaking tags into the UI.
 - **`idMal` gaps:** a small number of AniList entries lack `idMal`; the favorites migration drops any existing favorite that cannot be matched. Mainstream titles are unaffected.
+- **Id namespace collision:** MAL and AniList both use integers, but the same number can identify different titles. Legacy ranking rows must be invalidated and legacy favorite actions guarded until migration completes.
 - **Apollo codegen in CI:** the build gains a schema/codegen step; the plan must ensure the schema is committed so builds are reproducible offline.
-- **Rate limit during paging:** rapid scroll could approach the burst limit; the existing append delay plus the retry interceptor mitigate this.
+- **Rate limit during paging/migration:** AniList's currently degraded limit makes batched favorite lookups and server-directed retry mandatory; rapid scroll can still encounter the burst limiter.
+- **Provider longevity:** AniList removes the announced Jikan sunset from this app's critical path, but it remains an external dependency. Committed schema/operations and the domain seam reduce the cost of a future provider change.
 
 ## 12. Planning boundary
 
-This document defines the migration design. The implementation plan (task-by-task, TDD, with commits) is written next via the writing-plans skill and will sequence the work as: dependency/codegen setup → domain/filter model changes → mappers → queries and paging → repository and genres → notification worker → filter UI (adult toggle) → favorites migration → DI swap and Jikan removal → documentation and full verification.
+This document defines the migration design. After design approval, the implementation plan is rewritten task-by-task with red-green TDD and commits in this order:
+
+1. Apollo 5 contract spike and test-tooling proof.
+2. Dependency, committed schema, fragments, and operations setup.
+3. Shared Apollo response policy and rate-limit retry.
+4. Domain/filter semantics and the minimal filter UI change.
+5. Tolerant mappers with full ranking-cache detail parity.
+6. Search/paging cutover.
+7. Ranking, details, genres, and notification cutover, including atomic legacy ranking-cache invalidation.
+8. Batched crash-safe favorites migration and temporary interaction guard.
+9. DI cutover, Jikan/Retrofit removal, documentation, and full automated/manual verification.
