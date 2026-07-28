@@ -21,17 +21,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.example.animewiki.R
 import com.example.animewiki.domain.model.AnimeFilters
-import com.example.animewiki.domain.model.AnimeGenre
 
 @Composable
 internal fun AnimeFilterBar(
     filters: AnimeFilters,
-    genres: List<AnimeGenre>,
     onOpen: () -> Unit,
     onChange: (AnimeFilters) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val genreNames = genres.associateBy(AnimeGenre::id)
     val filtersLabel = stringResource(R.string.filters_open)
     val activeFiltersLabel = stringResource(R.string.filters_active_count, filters.activeCount)
     val buttonDescription = if (filters.activeCount > 0) {
@@ -58,16 +55,14 @@ internal fun AnimeFilterBar(
                 onChange(filters.copy(format = null))
             }
         }
-        filters.rating?.let { rating ->
-            RemovableFilterChip(stringResource(rating.labelRes())) {
-                onChange(filters.copy(rating = null))
+        if (filters.includeAdultContent) {
+            RemovableFilterChip(stringResource(R.string.filters_include_adult)) {
+                onChange(filters.copy(includeAdultContent = false))
             }
         }
-        filters.genreIds.sorted().forEach { id ->
-            genreNames[id]?.let { genre ->
-                RemovableFilterChip(genre.name) {
-                    onChange(filters.copy(genreIds = filters.genreIds - id))
-                }
+        filters.genres.sorted().forEach { genre ->
+            RemovableFilterChip(genre) {
+                onChange(filters.copy(genres = filters.genres - genre))
             }
         }
     }

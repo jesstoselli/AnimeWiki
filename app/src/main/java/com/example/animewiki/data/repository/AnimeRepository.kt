@@ -7,6 +7,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.filter
 import androidx.paging.map
+import com.apollographql.apollo.ApolloClient
 import com.example.animewiki.data.local.AppDatabase
 import com.example.animewiki.data.local.dao.FavoriteDao
 import com.example.animewiki.data.mapper.toDomain
@@ -30,6 +31,7 @@ import javax.inject.Singleton
 @Singleton
 @OptIn(ExperimentalPagingApi::class)
 class AnimeRepository @Inject constructor(
+    private val apolloClient: ApolloClient,
     private val api: JikanApi,
     private val db: AppDatabase,
     private val favoriteDao: FavoriteDao
@@ -69,7 +71,7 @@ class AnimeRepository @Inject constructor(
             prefetchDistance = 10,
             enablePlaceholders = false
         ),
-        pagingSourceFactory = { AnimeSearchPagingSource(api, criteria) }
+        pagingSourceFactory = { AnimeSearchPagingSource(apolloClient, criteria) }
     ).flow.map { pagingData ->
         val seenIds = mutableSetOf<Int>()
         pagingData.filter { anime -> seenIds.add(anime.id) }

@@ -33,11 +33,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.example.animewiki.R
-import com.example.animewiki.domain.model.AnimeAgeRating
 import com.example.animewiki.domain.model.AnimeFilters
 import com.example.animewiki.domain.model.AnimeFormat
 import com.example.animewiki.ui.screens.topAnime.AnimeGenresState
@@ -102,12 +100,11 @@ private fun FilterOptions(
             )
         }
         item {
-            FilterChoiceGroup(
-                title = R.string.filters_rating,
-                options = AnimeAgeRating.entries,
-                selected = draft.rating,
-                labelRes = AnimeAgeRating::labelRes,
-                onSelected = { onDraftChange(draft.copy(rating = it)) }
+            AdultContentFilterRow(
+                selected = draft.includeAdultContent,
+                onSelectedChange = {
+                    onDraftChange(draft.copy(includeAdultContent = it))
+                }
             )
         }
         item { FilterSectionTitle(R.string.filters_genres) }
@@ -118,13 +115,17 @@ private fun FilterOptions(
                 GenreLoadError(onRetryGenres)
             }
 
-            is AnimeGenresState.Content -> items(genresState.genres, key = { it.id }) { genre ->
+            is AnimeGenresState.Content -> items(genresState.genres, key = { it.name }) { genre ->
                 GenreFilterRow(
                     name = genre.name,
-                    selected = genre.id in draft.genreIds,
+                    selected = genre.name in draft.genres,
                     onSelectedChange = { selected ->
-                        val genreIds = if (selected) draft.genreIds + genre.id else draft.genreIds - genre.id
-                        onDraftChange(draft.copy(genreIds = genreIds))
+                        val genres = if (selected) {
+                            draft.genres + genre.name
+                        } else {
+                            draft.genres - genre.name
+                        }
+                        onDraftChange(draft.copy(genres = genres))
                     }
                 )
             }
@@ -153,6 +154,31 @@ private fun <T> FilterChoiceGroup(
 }
 
 @Composable
+private fun AdultContentFilterRow(
+    selected: Boolean,
+    onSelectedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .requiredHeightIn(min = 48.dp)
+            .toggleable(
+                value = selected,
+                role = Role.Checkbox,
+                onValueChange = onSelectedChange
+            )
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = stringResource(R.string.filters_include_adult),
+            modifier = Modifier.weight(1f)
+        )
+        Checkbox(checked = selected, onCheckedChange = null)
+    }
+}
+
+@Composable
 private fun GenreLoadError(onRetryGenres: () -> Unit) {
     Column {
         Text(stringResource(R.string.filters_genres_error))
@@ -172,13 +198,21 @@ private fun GenreFilterRow(
         modifier = Modifier
             .fillMaxWidth()
             .requiredHeightIn(min = 48.dp)
-            .toggleable(value = selected, onValueChange = onSelectedChange)
-            .padding(vertical = 4.dp)
-            .semantics { role = Role.Checkbox },
+            .toggleable(
+                value = selected,
+                role = Role.Checkbox,
+                onValueChange = onSelectedChange
+            )
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(checked = selected, onCheckedChange = null)
-        Text(name, modifier = Modifier.padding(start = 8.dp))
+        Text(
+            text = name,
+            modifier = Modifier
+                .padding(start = 8.dp)
+                .weight(1f)
+        )
     }
 }
 

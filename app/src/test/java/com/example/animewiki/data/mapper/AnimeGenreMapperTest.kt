@@ -10,14 +10,12 @@ class AnimeGenreMapperTest {
     fun `valid genre maps to domain`() {
         val result = AnimeGenreDto(malId = 1, name = "Action", count = 5310).toDomain()
 
-        assertEquals(1, result?.id)
         assertEquals("Action", result?.name)
-        assertEquals(5310, result?.count)
     }
 
     @Test
-    fun `missing id or blank name is skipped`() {
-        assertNull(AnimeGenreDto(malId = null, name = "Action").toDomain())
+    fun `genre identity only requires a nonblank name`() {
+        assertEquals("Action", AnimeGenreDto(malId = null, name = " Action ").toDomain()?.name)
         assertNull(AnimeGenreDto(malId = 1, name = "  ").toDomain())
     }
 }

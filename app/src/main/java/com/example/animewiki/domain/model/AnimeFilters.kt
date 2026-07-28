@@ -4,37 +4,46 @@ import java.util.Collections
 
 class AnimeFilters(
     val format: AnimeFormat? = null,
-    val rating: AnimeAgeRating? = null,
-    genreIds: Set<Int> = emptySet()
+    val includeAdultContent: Boolean = false,
+    genres: Set<String> = emptySet()
 ) {
-    val genreIds: Set<Int> = Collections.unmodifiableSet(genreIds.toSet())
+    val genres: Set<String> = Collections.unmodifiableSet(genres.toSet())
 
     val isEmpty: Boolean
-        get() = format == null && rating == null && genreIds.isEmpty()
+        get() = format == null && !includeAdultContent && genres.isEmpty()
 
     val activeCount: Int
-        get() = listOfNotNull(format, rating).size + genreIds.size
-
-    val genresQuery: String?
-        get() = genreIds.sorted().joinToString(",").ifBlank { null }
+        get() = listOfNotNull(format).size +
+            (if (includeAdultContent) 1 else 0) +
+            genres.size
 
     fun copy(
         format: AnimeFormat? = this.format,
-        rating: AnimeAgeRating? = this.rating,
-        genreIds: Set<Int> = this.genreIds
-    ): AnimeFilters = AnimeFilters(format, rating, genreIds)
+        includeAdultContent: Boolean = this.includeAdultContent,
+        genres: Set<String> = this.genres
+    ): AnimeFilters = AnimeFilters(
+        format = format,
+        includeAdultContent = includeAdultContent,
+        genres = genres
+    )
 
     override fun equals(other: Any?): Boolean =
         this === other || other is AnimeFilters &&
-            format == other.format && rating == other.rating && genreIds == other.genreIds
+            format == other.format &&
+            includeAdultContent == other.includeAdultContent &&
+            genres == other.genres
 
     override fun hashCode(): Int {
         var result = format?.hashCode() ?: 0
-        result = 31 * result + (rating?.hashCode() ?: 0)
-        result = 31 * result + genreIds.hashCode()
+        result = 31 * result + includeAdultContent.hashCode()
+        result = 31 * result + genres.hashCode()
         return result
     }
 
     override fun toString(): String =
-        "AnimeFilters(format=$format, rating=$rating, genreIds=$genreIds)"
+        "AnimeFilters(" +
+            "format=$format, " +
+            "includeAdultContent=$includeAdultContent, " +
+            "genres=$genres" +
+            ")"
 }

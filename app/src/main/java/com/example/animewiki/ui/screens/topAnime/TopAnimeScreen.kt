@@ -64,7 +64,6 @@ fun TopAnimeScreen(
     val filters by viewModel.filters.collectAsStateWithLifecycle()
     val genresState by viewModel.genresState.collectAsStateWithLifecycle()
     var showFilters by rememberSaveable { mutableStateOf(false) }
-    val genres = (genresState as? AnimeGenresState.Content)?.genres.orEmpty()
 
     AnimeWikiScaffold(
         title = stringResource(R.string.discover_title),
@@ -92,7 +91,6 @@ fun TopAnimeScreen(
             )
             AnimeFilterBar(
                 filters = filters,
-                genres = genres,
                 onOpen = {
                     viewModel.loadGenres()
                     showFilters = true

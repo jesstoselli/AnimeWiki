@@ -73,8 +73,8 @@ class TopAnimeViewModel @Inject constructor(
         applyFilters(AnimeFilters())
     }
 
-    fun removeGenre(id: Int) {
-        applyFilters(_filters.value.copy(genreIds = _filters.value.genreIds - id))
+    fun removeGenre(name: String) {
+        applyFilters(_filters.value.copy(genres = _filters.value.genres - name))
     }
 
     @Suppress("TooGenericExceptionCaught")

@@ -1,86 +1,206 @@
 package com.example.animewiki.data.paging
 
 import androidx.paging.PagingSource
-import com.example.animewiki.data.remote.JikanApi
-import com.example.animewiki.data.remote.dto.AnimeListResponseDto
-import com.example.animewiki.data.remote.dto.PaginationDto
-import com.example.animewiki.domain.model.AnimeAgeRating
+import com.apollographql.apollo.ApolloClient
+import com.apollographql.mockserver.MockResponse
+import com.apollographql.mockserver.MockServer
 import com.example.animewiki.domain.model.AnimeBrowseCriteria
 import com.example.animewiki.domain.model.AnimeFilters
 import com.example.animewiki.domain.model.AnimeFormat
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AnimeSearchPagingSourceTest {
-    private val api: JikanApi = mockk()
-
     @Test
-    fun `load sends normalized query and all active filters`() = runTest {
-        stubEmptyPage()
-        val criteria = AnimeBrowseCriteria.create(
-            query = " frieren ",
-            filters = AnimeFilters(
-                format = AnimeFormat.TV,
-                rating = AnimeAgeRating.PG13,
-                genreIds = setOf(10, 1)
-            )
-        )
+    fun `default filters send explicit false adult variable and omit blank search`() = runTest {
+        withServer(emptyPageResponse()) { server, client ->
+            val result = AnimeSearchPagingSource(
+                client,
+                AnimeBrowseCriteria.create(query = "   ")
+            ).load(refresh())
+            val variables = server.takeRequest().variables()
 
-        val result = AnimeSearchPagingSource(api, criteria).load(refresh())
-
-        assertTrue(result is PagingSource.LoadResult.Page)
-        coVerify(exactly = 1) {
-            api.searchAnime(
-                query = "frieren",
-                page = 1,
-                limit = 25,
-                type = "tv",
-                rating = "pg13",
-                genres = "1,10",
-                orderBy = "popularity",
-                sort = "asc"
-            )
+            assertTrue(result is PagingSource.LoadResult.Page)
+            assertEquals(1, variables.getValue("page").jsonPrimitive.int)
+            assertEquals(25, variables.getValue("perPage").jsonPrimitive.int)
+            assertFalse(variables.containsKey("search"))
+            assertFalse(variables.containsKey("format"))
+            assertFalse(variables.containsKey("genres"))
+            assertFalse(variables.getValue("isAdult").jsonPrimitive.boolean)
         }
     }
 
     @Test
-    fun `filter-only load omits blank q parameter`() = runTest {
-        stubEmptyPage()
-        val criteria = AnimeBrowseCriteria.create(
-            filters = AnimeFilters(format = AnimeFormat.MOVIE)
-        )
+    fun `including adult content omits isAdult instead of sending true`() = runTest {
+        withServer(emptyPageResponse()) { server, client ->
+            AnimeSearchPagingSource(
+                client,
+                AnimeBrowseCriteria.create(
+                    filters = AnimeFilters(includeAdultContent = true)
+                )
+            ).load(refresh())
+            val requestBody = server.takeRequest().body.utf8()
+            val variables = requestBody.variables()
 
-        AnimeSearchPagingSource(api, criteria).load(refresh())
-
-        coVerify {
-            api.searchAnime(
-                query = null,
-                page = 1,
-                limit = 25,
-                type = "movie",
-                rating = null,
-                genres = null,
-                orderBy = "popularity",
-                sort = "asc"
-            )
+            assertFalse(variables.containsKey("isAdult"))
+            assertFalse(requestBody.contains(""""isAdult":true"""))
         }
     }
 
-    private fun stubEmptyPage() {
-        coEvery { api.searchAnime(any(), any(), any(), any(), any(), any(), any(), any()) } returns
-            AnimeListResponseDto(
-                pagination = PaginationDto(hasNextPage = false),
-                data = emptyList()
+    @Test
+    fun `query format and genres use normalized deterministic AniList variables`() = runTest {
+        withServer(emptyPageResponse()) { server, client ->
+            AnimeSearchPagingSource(
+                client,
+                AnimeBrowseCriteria.create(
+                    query = "  frieren  ",
+                    filters = AnimeFilters(
+                        format = AnimeFormat.TV,
+                        genres = setOf("Fantasy", "Action")
+                    )
+                )
+            ).load(refresh(loadSize = 40))
+            val variables = server.takeRequest().variables()
+
+            assertEquals("frieren", variables.getValue("search").jsonPrimitive.content)
+            assertEquals("TV", variables.getValue("format").jsonPrimitive.content)
+            assertEquals(
+                listOf("Action", "Fantasy"),
+                variables.getValue("genres").jsonArray.map { it.jsonPrimitive.content }
             )
+            assertEquals(25, variables.getValue("perPage").jsonPrimitive.int)
+            assertFalse(variables.getValue("isAdult").jsonPrimitive.boolean)
+        }
     }
 
-    private fun refresh() = PagingSource.LoadParams.Refresh<Int>(
+    @Test
+    fun `has next page advances key`() = runTest {
+        withServer(emptyPageResponse(hasNextPage = true)) { _, client ->
+            val result = AnimeSearchPagingSource(
+                client,
+                AnimeBrowseCriteria.create()
+            ).load(refresh()) as PagingSource.LoadResult.Page
+
+            assertEquals(2, result.nextKey)
+            assertEquals(null, result.prevKey)
+        }
+    }
+
+    @Test
+    fun `real generated response mapping skips malformed media and keeps valid media`() = runTest {
+        withServer(pageWithMalformedAndValidMedia()) { _, client ->
+            val result = AnimeSearchPagingSource(
+                client,
+                AnimeBrowseCriteria.create(query = "frieren")
+            ).load(refresh()) as PagingSource.LoadResult.Page
+
+            assertEquals(listOf(52991), result.data.map { it.id })
+            assertEquals("Frieren: Beyond Journey's End", result.data.single().title)
+            assertEquals(9.2, result.data.single().score ?: 0.0, 0.0)
+        }
+    }
+
+    private suspend fun withServer(
+        responseBody: String,
+        block: suspend (MockServer, ApolloClient) -> Unit
+    ) {
+        val server = MockServer.Builder().build()
+        val client = ApolloClient.Builder().serverUrl(server.url()).build()
+        try {
+            server.enqueue(
+                MockResponse.Builder()
+                    .body(responseBody)
+                    .build()
+            )
+            block(server, client)
+        } finally {
+            client.close()
+            server.close()
+        }
+    }
+
+    private fun refresh(loadSize: Int = 25) = PagingSource.LoadParams.Refresh<Int>(
         key = null,
-        loadSize = 25,
+        loadSize = loadSize,
         placeholdersEnabled = false
     )
+
+    private fun com.apollographql.mockserver.MockRequest.variables(): JsonObject =
+        body.utf8().variables()
+
+    private fun String.variables(): JsonObject =
+        Json.parseToJsonElement(this).jsonObject.getValue("variables").jsonObject
+
+    private fun emptyPageResponse(hasNextPage: Boolean = false): String =
+        """
+        {
+          "data": {
+            "Page": {
+              "pageInfo": {
+                "currentPage": 1,
+                "hasNextPage": $hasNextPage
+              },
+              "media": []
+            }
+          }
+        }
+        """.trimIndent()
+
+    private fun pageWithMalformedAndValidMedia(): String =
+        """
+        {
+          "data": {
+            "Page": {
+              "pageInfo": {
+                "currentPage": 1,
+                "hasNextPage": false
+              },
+              "media": [
+                {
+                  "__typename": "Media",
+                  "id": 1,
+                  "title": {
+                    "english": null,
+                    "romaji": null
+                  },
+                  "coverImage": {
+                    "extraLarge": "https://example.com/malformed.jpg",
+                    "large": null
+                  },
+                  "averageScore": 10,
+                  "episodes": 1,
+                  "format": "TV",
+                  "seasonYear": 2024
+                },
+                {
+                  "__typename": "Media",
+                  "id": 52991,
+                  "title": {
+                    "english": "Frieren: Beyond Journey's End",
+                    "romaji": "Sousou no Frieren"
+                  },
+                  "coverImage": {
+                    "extraLarge": "https://example.com/frieren.jpg",
+                    "large": "https://example.com/frieren-large.jpg"
+                  },
+                  "averageScore": 92,
+                  "episodes": 28,
+                  "format": "TV",
+                  "seasonYear": 2023
+                }
+              ]
+            }
+          }
+        }
+        """.trimIndent()
 }

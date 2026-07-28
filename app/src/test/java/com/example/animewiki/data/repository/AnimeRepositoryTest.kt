@@ -1,5 +1,6 @@
 package com.example.animewiki.data.repository
 
+import com.apollographql.apollo.ApolloClient
 import com.example.animewiki.data.local.AppDatabase
 import com.example.animewiki.data.local.dao.AnimeDao
 import com.example.animewiki.data.local.dao.FavoriteDao
@@ -31,6 +32,7 @@ import java.io.IOException
 
 class AnimeRepositoryTest {
 
+    private val apolloClient: ApolloClient = mockk()
     private val api: JikanApi = mockk()
     private val animeDao: AnimeDao = mockk(relaxed = true)
     private val favoriteDao: FavoriteDao = mockk(relaxed = true)
@@ -42,7 +44,7 @@ class AnimeRepositoryTest {
 
     @Before
     fun setUp() {
-        repository = AnimeRepository(api, db, favoriteDao)
+        repository = AnimeRepository(apolloClient, api, db, favoriteDao)
     }
 
     @Test
@@ -93,7 +95,7 @@ class AnimeRepositoryTest {
         coEvery { api.getAnimeGenres() } returns AnimeGenreListResponseDto(
             data = listOf(
                 AnimeGenreDto(malId = 2, name = "Adventure", count = 20),
-                AnimeGenreDto(malId = null, name = "Invalid"),
+                AnimeGenreDto(malId = null, name = " "),
                 AnimeGenreDto(malId = 1, name = "Action", count = 30)
             )
         )
@@ -254,7 +256,7 @@ class AnimeRepositoryTest {
         )
 
         val exposedGenres = repository.getAnimeGenres() as MutableList<AnimeGenre>
-        exposedGenres[0] = AnimeGenre(id = 99, name = "Corrupted", count = null)
+        exposedGenres[0] = AnimeGenre(name = "Corrupted")
 
         assertEquals(listOf("Action", "Adventure"), repository.getAnimeGenres().map { it.name })
         coVerify(exactly = 1) { api.getAnimeGenres() }

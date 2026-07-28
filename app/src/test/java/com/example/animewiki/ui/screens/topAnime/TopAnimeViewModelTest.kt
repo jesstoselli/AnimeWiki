@@ -3,7 +3,6 @@ package com.example.animewiki.ui.screens.topAnime
 import androidx.paging.PagingData
 import app.cash.turbine.test
 import com.example.animewiki.data.repository.AnimeRepository
-import com.example.animewiki.domain.model.AnimeAgeRating
 import com.example.animewiki.domain.model.AnimeFilters
 import com.example.animewiki.domain.model.AnimeFormat
 import com.example.animewiki.domain.model.AnimeGenre
@@ -119,7 +118,10 @@ class TopAnimeViewModelTest {
 
         viewModel.onQueryChange("  frieren  ")
         viewModel.applyFilters(
-            AnimeFilters(rating = AnimeAgeRating.PG13, genreIds = setOf(10, 1))
+            AnimeFilters(
+                includeAdultContent = true,
+                genres = setOf("Fantasy", "Action")
+            )
         )
         advanceTimeBy(401)
         advanceUntilIdle()
@@ -128,8 +130,8 @@ class TopAnimeViewModelTest {
             repository.searchAnime(
                 match {
                     it.query == "frieren" &&
-                        it.filters.rating == AnimeAgeRating.PG13 &&
-                        it.filters.genresQuery == "1,10"
+                        it.filters.includeAdultContent &&
+                        it.filters.genres == setOf("Action", "Fantasy")
                 }
             )
         }
@@ -251,12 +253,12 @@ class TopAnimeViewModelTest {
 
         viewModel.applyFilters(AnimeFilters(format = AnimeFormat.TV))
         viewModel.applyFilters(AnimeFilters(format = AnimeFormat.MOVIE))
-        viewModel.applyFilters(AnimeFilters(rating = AnimeAgeRating.PG13))
+        viewModel.applyFilters(AnimeFilters(includeAdultContent = true))
         runCurrent()
 
         verify(exactly = 1) {
             repository.searchAnime(
-                match { it.query.isEmpty() && it.filters.rating == AnimeAgeRating.PG13 }
+                match { it.query.isEmpty() && it.filters.includeAdultContent }
             )
         }
         job.cancel()
@@ -289,7 +291,9 @@ class TopAnimeViewModelTest {
     @Test
     fun `clear filters restores empty applied state`() = runTest {
         val viewModel = TopAnimeViewModel(repository)
-        viewModel.applyFilters(AnimeFilters(rating = AnimeAgeRating.PG13, genreIds = setOf(1)))
+        viewModel.applyFilters(
+            AnimeFilters(includeAdultContent = true, genres = setOf("Action"))
+        )
 
         viewModel.clearFilters()
 
@@ -299,19 +303,24 @@ class TopAnimeViewModelTest {
     @Test
     fun `removing genre preserves the other applied filters`() = runTest {
         val viewModel = TopAnimeViewModel(repository)
-        viewModel.applyFilters(AnimeFilters(format = AnimeFormat.TV, genreIds = setOf(1, 2)))
+        viewModel.applyFilters(
+            AnimeFilters(
+                format = AnimeFormat.TV,
+                genres = setOf("Action", "Fantasy")
+            )
+        )
 
-        viewModel.removeGenre(1)
+        viewModel.removeGenre("Action")
 
         assertEquals(
-            AnimeFilters(format = AnimeFormat.TV, genreIds = setOf(2)),
+            AnimeFilters(format = AnimeFormat.TV, genres = setOf("Fantasy")),
             viewModel.filters.value
         )
     }
 
     @Test
     fun `load genres exposes loading then content`() = runTest {
-        val genres = listOf(AnimeGenre(1, "Action", 30))
+        val genres = listOf(AnimeGenre("Action"))
         coEvery { repository.getAnimeGenres(false) } coAnswers {
             yield()
             genres
@@ -339,7 +348,7 @@ class TopAnimeViewModelTest {
 
     @Test
     fun `retry genres forces refresh after an error`() = runTest {
-        val genres = listOf(AnimeGenre(1, "Action", 30))
+        val genres = listOf(AnimeGenre("Action"))
         coEvery { repository.getAnimeGenres(false) } throws IOException("upstream")
         coEvery { repository.getAnimeGenres(true) } returns genres
         val viewModel = TopAnimeViewModel(repository)

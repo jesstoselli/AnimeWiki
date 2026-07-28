@@ -26,7 +26,7 @@
     <string name="filters_open">Filtros</string>
     <string name="filters_title">Filtrar animes</string>
     <string name="filters_format">Formato</string>
-    <string name="filters_rating">Classificação etária</string>
+    <string name="filters_include_adult">Incluir conteúdo adulto</string>
     <string name="filters_genres">Gêneros</string>
     <string name="filters_apply">Aplicar</string>
     <string name="filters_clear">Limpar tudo</string>
@@ -40,12 +40,6 @@
     <string name="filter_format_ona">ONA</string>
     <string name="filter_format_special">Especial</string>
     <string name="filter_format_music">Música</string>
-    <string name="filter_rating_g">Livre</string>
-    <string name="filter_rating_pg">Infantil</string>
-    <string name="filter_rating_pg13">13+</string>
-    <string name="filter_rating_r17">17+</string>
-    <string name="filter_rating_r_plus">R+</string>
-    <string name="filter_rating_rx">Adulto</string>
 
     <!-- Load error banners -->
     <string name="offline_banner">Você está offline — mostrando itens salvos</string>
