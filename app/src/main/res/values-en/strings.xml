@@ -46,7 +46,7 @@
     <string name="filter_sort_popularity">Most popular</string>
     <string name="filter_sort_title">Title</string>
     <string name="filter_sort_newest">Newest</string>
-    <string name="organizations_open">Studios and producers</string>
+    <string name="organizations_open">Studio</string>
     <string name="organizations_title">Choose organization</string>
     <string name="organizations_search">Search studio or producer</string>
     <string name="organizations_retry">Try loading again</string>

@@ -36,7 +36,9 @@ internal fun AnimeFilterBar(
     modifier: Modifier = Modifier
 ) {
     val filtersLabel = stringResource(R.string.filters_open)
+    val organizationsLabel = stringResource(R.string.organizations_open)
     val activeFiltersLabel = stringResource(R.string.filters_active_count, filters.activeCount)
+    val hasActiveSelection = !filters.isEmpty || organization != null
     val buttonDescription = if (filters.activeCount > 0) {
         "$filtersLabel, $activeFiltersLabel"
     } else {
@@ -52,14 +54,20 @@ internal fun AnimeFilterBar(
             modifier = Modifier.semantics { contentDescription = buttonDescription }
         ) {
             Icon(Icons.Default.FilterList, contentDescription = null)
-            Spacer(Modifier.width(6.dp))
-            Text(filtersLabel)
-            if (filters.activeCount > 0) Text(" (${filters.activeCount})")
+            if (!hasActiveSelection) {
+                Spacer(Modifier.width(6.dp))
+                Text(filtersLabel)
+            }
         }
-        FilledTonalButton(onClick = onOpenOrganizations) {
+        FilledTonalButton(
+            onClick = onOpenOrganizations,
+            modifier = Modifier.semantics { contentDescription = organizationsLabel }
+        ) {
             Icon(Icons.Default.Business, contentDescription = null)
-            Spacer(Modifier.width(6.dp))
-            Text(stringResource(R.string.organizations_open))
+            if (!hasActiveSelection) {
+                Spacer(Modifier.width(6.dp))
+                Text(organizationsLabel)
+            }
         }
         organization?.let {
             RemovableFilterChip(it.name, onClearOrganization)
