@@ -77,6 +77,20 @@ class AnimeRepositoryTest {
     }
 
     @Test
+    fun `getAnimeDetails maps relations and recommendations from the same response`() = runTest {
+        withServer(detailResponseWithDiscoverySections()) { _, client ->
+            val result = repository(client).getAnimeDetails(52991)
+
+            assertEquals(1, result?.relations?.size)
+            assertEquals("SEQUEL", result?.relations?.single()?.type?.name)
+            assertEquals("Frieren Season 2", result?.relations?.single()?.media?.title)
+            assertEquals(1, result?.recommendations?.size)
+            assertEquals("The Apothecary Diaries", result?.recommendations?.single()?.media?.title)
+            assertEquals(720, result?.recommendations?.single()?.votes)
+        }
+    }
+
+    @Test
     fun `getAnimeDetails falls back to cache on GraphQL server failure`() = runTest {
         coEvery { animeDao.getById(52991) } returns cachedFrierenEntity()
         withServer("""{"data":null,"errors":[{"message":"details unavailable"}]}""") { _, client ->
@@ -359,6 +373,48 @@ class AnimeRepositoryTest {
           ${if (includeErrors) ""","errors":[{"message":"optional field failed"}]""" else ""}
         }
         """.trimIndent()
+
+    private fun detailResponseWithDiscoverySections(): String =
+        detailResponse("Frieren from AniList").replace(
+            """"rankings": [{"rank": 1, "type": "RATED", "allTime": true}]""",
+            """
+            "rankings": [{"rank": 1, "type": "RATED", "allTime": true}],
+            "relations": {
+              "edges": [{
+                "relationType": "SEQUEL",
+                "node": {
+                  "__typename": "Media",
+                  "type": "ANIME",
+                  "id": 154587,
+                  "title": {"english": "Frieren Season 2", "romaji": null},
+                  "coverImage": {"extraLarge": "https://example.com/frieren-2.jpg", "large": null},
+                  "averageScore": 90,
+                  "episodes": null,
+                  "format": "TV",
+                  "seasonYear": 2026,
+                  "isAdult": false
+                }
+              }]
+            },
+            "recommendations": {
+              "nodes": [{
+                "rating": 720,
+                "mediaRecommendation": {
+                  "__typename": "Media",
+                  "type": "ANIME",
+                  "id": 161645,
+                  "title": {"english": "The Apothecary Diaries", "romaji": null},
+                  "coverImage": {"extraLarge": "https://example.com/apothecary.jpg", "large": null},
+                  "averageScore": 89,
+                  "episodes": 24,
+                  "format": "TV",
+                  "seasonYear": 2023,
+                  "isAdult": false
+                }
+              }]
+            }
+            """.trimIndent()
+        )
 
     private fun frieren() = Anime(
         id = 52991,

@@ -78,7 +78,10 @@ fun AnimeWikiNavHost() {
                 navDeepLink { uriPattern = "animewiki://details/{id}" }
             )
         ) {
-            AnimeDetailsScreen(onBack = { rootNavController.popBackStack() })
+            AnimeDetailsScreen(
+                onBack = { rootNavController.popBackStack() },
+                onAnimeClick = { id -> rootNavController.navigate(Routes.details(id)) }
+            )
         }
 
         composable(Routes.SETTINGS) {

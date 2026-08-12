@@ -66,6 +66,20 @@
     <!-- Details screen -->
     <string name="details_title">Detalhes</string>
     <string name="details_synopsis">Sinopse</string>
+    <string name="details_information">Informações</string>
+    <string name="details_related">Franquia e relacionados</string>
+    <string name="details_recommendations">Você também pode gostar</string>
+    <string name="details_expanded">Expandida</string>
+    <string name="details_collapsed">Recolhida</string>
+    <string name="details_recommendation_votes">%1$d votos</string>
+    <string name="details_media_label">%1$s · %2$s</string>
+    <string name="details_relation_prequel">Prequela</string>
+    <string name="details_relation_sequel">Continuação</string>
+    <string name="details_relation_spin_off">Spin-off</string>
+    <string name="details_relation_side_story">História paralela</string>
+    <string name="details_relation_adaptation">Adaptação</string>
+    <string name="details_relation_alternative">Versão alternativa</string>
+    <string name="details_relation_other">Relacionado</string>
     <string name="details_episodes">Episódios</string>
     <string name="details_duration">Duração</string>
     <string name="details_status">Status</string>

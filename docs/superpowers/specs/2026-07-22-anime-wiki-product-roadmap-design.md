@@ -327,6 +327,24 @@ The expanded details screen is section-based:
 
 Primary details load first. Secondary sections load only when needed, have independent state, and use independent caches. No secondary error replaces the primary details screen.
 
+### Expandable-section interaction
+
+The details expansion begins with synopsis, information, related titles, and
+contextual recommendations. Cover, title, score, rank, format, year, genres,
+and favorite action remain permanently visible.
+
+- Synopsis and Information start expanded.
+- Related titles, Recommendations, and future secondary sections start collapsed.
+- Each section expands and collapses independently.
+- Expansion state is retained while the user remains on the current anime.
+- Empty secondary sections are omitted instead of rendering empty accordions.
+- The same reusable section component will later host characters, episodes,
+  and streaming links so the screen does not become an unstructured long page.
+
+For the first upgraded delivery, AniList relations and recommendations are
+included in the existing anime-details GraphQL request. This avoids extra
+network calls while preserving cache-first fallback for the primary details.
+
 ## 6. Testing strategy
 
 Each release includes:

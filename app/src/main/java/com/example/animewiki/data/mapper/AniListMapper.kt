@@ -2,11 +2,18 @@ package com.example.animewiki.data.mapper
 
 import com.example.animewiki.data.local.entity.AnimeEntity
 import com.example.animewiki.domain.model.Anime
+import com.example.animewiki.domain.model.AnimeMediaPreview
+import com.example.animewiki.domain.model.AnimeRecommendation
+import com.example.animewiki.domain.model.AnimeRelation
+import com.example.animewiki.domain.model.AnimeRelationType
+import com.example.animewiki.graphql.AnimeDetailsQuery
 import com.example.animewiki.graphql.fragment.AnimeCacheFields
 import com.example.animewiki.graphql.fragment.AnimeCardFields
 import com.example.animewiki.graphql.type.MediaFormat
 import com.example.animewiki.graphql.type.MediaRankType
+import com.example.animewiki.graphql.type.MediaRelation
 import com.example.animewiki.graphql.type.MediaStatus
+import com.example.animewiki.graphql.type.MediaType
 
 fun AnimeCardFields.toDomain(): Anime? {
     val title = title?.english.nonBlank() ?: title?.romaji.nonBlank() ?: return null
@@ -58,6 +65,61 @@ fun AnimeCacheFields.toDomain(): Anime? {
             ?.id
             .nonBlank()
     )
+}
+
+fun AnimeDetailsQuery.Media.toDomainDetails(): Anime? {
+    val anime = animeCacheFields.toDomain() ?: return null
+    val related = relations?.edges.orEmpty()
+        .mapNotNull { edge ->
+            val node = edge?.node ?: return@mapNotNull null
+            if (node.animeCardFields.isAdult == true) return@mapNotNull null
+            val preview = node.animeCardFields.toPreview(node.type) ?: return@mapNotNull null
+            AnimeRelation(edge.relationType.toDomainRelationType(), preview)
+        }
+        .filterNot { it.media.id == anime.id }
+        .distinctBy { it.media.id }
+
+    val recommended = recommendations?.nodes.orEmpty()
+        .mapNotNull { recommendation ->
+            val media = recommendation?.mediaRecommendation ?: return@mapNotNull null
+            if (media.animeCardFields.isAdult == true) return@mapNotNull null
+            val preview = media.animeCardFields.toPreview(media.type) ?: return@mapNotNull null
+            AnimeRecommendation(preview, recommendation.rating ?: 0)
+        }
+        .filterNot { it.media.id == anime.id }
+        .distinctBy { it.media.id }
+        .sortedByDescending(AnimeRecommendation::votes)
+
+    return anime.copy(relations = related, recommendations = recommended)
+}
+
+private fun AnimeCardFields.toPreview(mediaType: MediaType?): AnimeMediaPreview? =
+    toDomain()?.let { anime ->
+        AnimeMediaPreview(
+            id = anime.id,
+            title = anime.title,
+            imageUrl = anime.imageUrl,
+            score = anime.score,
+            year = anime.year,
+            mediaType = when (mediaType) {
+                MediaType.ANIME -> "Anime"
+                MediaType.MANGA -> "Manga"
+                MediaType.UNKNOWN__, null -> "Media"
+            },
+            isAnime = mediaType == MediaType.ANIME
+        )
+    }
+
+private fun MediaRelation?.toDomainRelationType(): AnimeRelationType = when (this) {
+    MediaRelation.PREQUEL -> AnimeRelationType.PREQUEL
+    MediaRelation.SEQUEL -> AnimeRelationType.SEQUEL
+    MediaRelation.SPIN_OFF -> AnimeRelationType.SPIN_OFF
+    MediaRelation.SIDE_STORY,
+    MediaRelation.PARENT -> AnimeRelationType.SIDE_STORY
+    MediaRelation.ADAPTATION,
+    MediaRelation.SOURCE -> AnimeRelationType.ADAPTATION
+    MediaRelation.ALTERNATIVE -> AnimeRelationType.ALTERNATIVE
+    else -> AnimeRelationType.OTHER
 }
 
 fun AnimeCacheFields.toEntity(pageIndex: Int): AnimeEntity? = toDomain()?.let { anime ->

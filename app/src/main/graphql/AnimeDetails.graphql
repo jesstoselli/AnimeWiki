@@ -1,5 +1,23 @@
 query AnimeDetails($id: Int!) {
   Media(id: $id, type: ANIME) {
     ...AnimeCacheFields
+    relations {
+      edges {
+        relationType(version: 3)
+        node {
+          type
+          ...AnimeCardFields
+        }
+      }
+    }
+    recommendations(page: 1, perPage: 10, sort: [RATING_DESC]) {
+      nodes {
+        rating
+        mediaRecommendation {
+          type
+          ...AnimeCardFields
+        }
+      }
+    }
   }
 }

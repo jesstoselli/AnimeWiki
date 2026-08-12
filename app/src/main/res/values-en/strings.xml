@@ -67,6 +67,20 @@
     <!-- Details screen -->
     <string name="details_title">Details</string>
     <string name="details_synopsis">Synopsis</string>
+    <string name="details_information">Information</string>
+    <string name="details_related">Franchise and related</string>
+    <string name="details_recommendations">You may also like</string>
+    <string name="details_expanded">Expanded</string>
+    <string name="details_collapsed">Collapsed</string>
+    <string name="details_recommendation_votes">%1$d votes</string>
+    <string name="details_media_label">%1$s · %2$s</string>
+    <string name="details_relation_prequel">Prequel</string>
+    <string name="details_relation_sequel">Sequel</string>
+    <string name="details_relation_spin_off">Spin-off</string>
+    <string name="details_relation_side_story">Side story</string>
+    <string name="details_relation_adaptation">Adaptation</string>
+    <string name="details_relation_alternative">Alternative version</string>
+    <string name="details_relation_other">Related</string>
     <string name="details_episodes">Episodes</string>
     <string name="details_duration">Duration</string>
     <string name="details_status">Status</string>
