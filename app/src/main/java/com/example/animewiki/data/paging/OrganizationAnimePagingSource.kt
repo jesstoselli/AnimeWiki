@@ -17,6 +17,7 @@ class OrganizationAnimePagingSource(
     private val organization: AnimeOrganization,
     private val sort: AnimeSort
 ) : PagingSource<Int, Anime>() {
+    private val seenAnimeIds = mutableSetOf<Int>()
 
     override fun getRefreshKey(state: PagingState<Int, Anime>): Int? =
         state.anchorPosition?.let { anchor ->
@@ -29,6 +30,7 @@ class OrganizationAnimePagingSource(
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Anime> {
         val page = params.key ?: 1
         return try {
+            if (page == 1) seenAnimeIds.clear()
             if (page > 1) delay(400)
             val data = apolloClient.query(
                 OrganizationAnimeQuery(
@@ -46,6 +48,7 @@ class OrganizationAnimePagingSource(
             val items = media.nodes.orEmpty()
                 .filter { it?.animeCardFields?.isAdult != true }
                 .mapNotNull { it?.animeCardFields?.toDomain() }
+                .filter { seenAnimeIds.add(it.id) }
 
             LoadResult.Page(
                 data = items,
