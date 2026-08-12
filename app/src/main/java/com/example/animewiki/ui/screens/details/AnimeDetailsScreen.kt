@@ -31,6 +31,7 @@ import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -38,14 +39,17 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.example.animewiki.R
 import com.example.animewiki.domain.model.Anime
+import com.example.animewiki.domain.model.AnimeCharacterRole
 import com.example.animewiki.domain.model.AnimeRelationType
 import com.example.animewiki.ui.components.AnimeWikiScaffold
+import com.example.animewiki.ui.screens.details.components.CharacterCastCard
 import com.example.animewiki.ui.screens.details.components.DetailsMediaCard
 import com.example.animewiki.ui.screens.details.components.DetailsScreenError
 import com.example.animewiki.ui.screens.details.components.ExpandableDetailsSection
 import com.example.animewiki.ui.screens.details.components.InfoChip
 import com.example.animewiki.ui.screens.details.components.InfoChipTone
 import com.example.animewiki.ui.screens.details.components.InfoRow
+import com.example.animewiki.ui.screens.details.components.StreamingLinkCard
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -111,12 +115,14 @@ fun AnimeDetailsScreen(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-@Suppress("LongMethod")
+@Suppress("CyclomaticComplexMethod", "LongMethod")
 private fun AnimeDetailsContent(
     anime: Anime,
     onAnimeClick: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val uriHandler = LocalUriHandler.current
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -193,6 +199,22 @@ private fun AnimeDetailsContent(
                 )
             }
 
+            if (anime.characters.isNotEmpty()) {
+                ExpandableDetailsSection(
+                    title = stringResource(R.string.details_characters_cast),
+                    initiallyExpanded = false
+                ) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(anime.characters, key = { it.id }) { character ->
+                            CharacterCastCard(
+                                character = character,
+                                roleLabel = characterRoleLabel(character.role)
+                            )
+                        }
+                    }
+                }
+            }
+
             if (anime.relations.isNotEmpty()) {
                 ExpandableDetailsSection(
                     title = stringResource(R.string.details_related),
@@ -214,6 +236,27 @@ private fun AnimeDetailsContent(
                                 }
                             )
                         }
+                    }
+                }
+            }
+
+            if (anime.streamingLinks.isNotEmpty()) {
+                ExpandableDetailsSection(
+                    title = stringResource(R.string.details_where_to_watch),
+                    initiallyExpanded = false
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        anime.streamingLinks.forEach { link ->
+                            StreamingLinkCard(
+                                link = link,
+                                onClick = { uriHandler.openUri(link.url) }
+                            )
+                        }
+                        Text(
+                            text = stringResource(R.string.details_streaming_region_notice),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
@@ -248,6 +291,15 @@ private fun AnimeDetailsContent(
         }
     }
 }
+
+@Composable
+private fun characterRoleLabel(role: AnimeCharacterRole): String = stringResource(
+    when (role) {
+        AnimeCharacterRole.MAIN -> R.string.details_character_main
+        AnimeCharacterRole.SUPPORTING -> R.string.details_character_supporting
+        AnimeCharacterRole.BACKGROUND -> R.string.details_character_background
+    }
+)
 
 @Composable
 private fun relationLabel(type: AnimeRelationType): String = stringResource(

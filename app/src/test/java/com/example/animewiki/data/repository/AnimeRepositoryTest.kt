@@ -77,7 +77,7 @@ class AnimeRepositoryTest {
     }
 
     @Test
-    fun `getAnimeDetails maps relations and recommendations from the same response`() = runTest {
+    fun `getAnimeDetails maps discovery sections from the same response`() = runTest {
         withServer(detailResponseWithDiscoverySections()) { _, client ->
             val result = repository(client).getAnimeDetails(52991)
 
@@ -87,6 +87,11 @@ class AnimeRepositoryTest {
             assertEquals(1, result?.recommendations?.size)
             assertEquals("The Apothecary Diaries", result?.recommendations?.single()?.media?.title)
             assertEquals(720, result?.recommendations?.single()?.votes)
+            assertEquals(1, result?.characters?.size)
+            assertEquals("Frieren", result?.characters?.single()?.name)
+            assertEquals("Atsumi Tanezaki", result?.characters?.single()?.japaneseVoiceActor)
+            assertEquals(1, result?.streamingLinks?.size)
+            assertEquals("Crunchyroll", result?.streamingLinks?.single()?.site)
         }
     }
 
@@ -412,7 +417,43 @@ class AnimeRepositoryTest {
                   "isAdult": false
                 }
               }]
-            }
+            },
+            "characters": {
+              "edges": [{
+                "role": "MAIN",
+                "node": {
+                  "id": 176754,
+                  "name": {"full": "Frieren"},
+                  "image": {
+                    "large": "https://example.com/character-frieren.jpg",
+                    "medium": null
+                  }
+                },
+                "voiceActors": [{
+                  "id": 95027,
+                  "name": {"full": "Atsumi Tanezaki"}
+                }]
+              }]
+            },
+            "externalLinks": [{
+              "id": 1,
+              "url": "https://www.crunchyroll.com/frieren",
+              "site": "Crunchyroll",
+              "type": "STREAMING",
+              "language": "English",
+              "icon": "https://example.com/crunchyroll.png",
+              "notes": null,
+              "isDisabled": false
+            }, {
+              "id": 2,
+              "url": "https://example.com/disabled",
+              "site": "Disabled service",
+              "type": "STREAMING",
+              "language": null,
+              "icon": null,
+              "notes": null,
+              "isDisabled": true
+            }]
             """.trimIndent()
         )
 

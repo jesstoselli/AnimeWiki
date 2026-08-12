@@ -19,5 +19,29 @@ query AnimeDetails($id: Int!) {
         }
       }
     }
+    characters(page: 1, perPage: 12, sort: [ROLE, RELEVANCE]) {
+      edges {
+        role
+        node {
+          id
+          name { full }
+          image { large medium }
+        }
+        voiceActors(language: JAPANESE, sort: [RELEVANCE]) {
+          id
+          name { full }
+        }
+      }
+    }
+    externalLinks {
+      id
+      url
+      site
+      type
+      language
+      icon
+      notes
+      isDisabled
+    }
   }
 }

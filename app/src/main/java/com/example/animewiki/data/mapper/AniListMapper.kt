@@ -2,13 +2,18 @@ package com.example.animewiki.data.mapper
 
 import com.example.animewiki.data.local.entity.AnimeEntity
 import com.example.animewiki.domain.model.Anime
+import com.example.animewiki.domain.model.AnimeCharacter
+import com.example.animewiki.domain.model.AnimeCharacterRole
 import com.example.animewiki.domain.model.AnimeMediaPreview
 import com.example.animewiki.domain.model.AnimeRecommendation
 import com.example.animewiki.domain.model.AnimeRelation
 import com.example.animewiki.domain.model.AnimeRelationType
+import com.example.animewiki.domain.model.AnimeStreamingLink
 import com.example.animewiki.graphql.AnimeDetailsQuery
 import com.example.animewiki.graphql.fragment.AnimeCacheFields
 import com.example.animewiki.graphql.fragment.AnimeCardFields
+import com.example.animewiki.graphql.type.CharacterRole
+import com.example.animewiki.graphql.type.ExternalLinkType
 import com.example.animewiki.graphql.type.MediaFormat
 import com.example.animewiki.graphql.type.MediaRankType
 import com.example.animewiki.graphql.type.MediaRelation
@@ -90,7 +95,59 @@ fun AnimeDetailsQuery.Media.toDomainDetails(): Anime? {
         .distinctBy { it.media.id }
         .sortedByDescending(AnimeRecommendation::votes)
 
-    return anime.copy(relations = related, recommendations = recommended)
+    return anime.copy(
+        relations = related,
+        recommendations = recommended,
+        characters = characters.toDomainCharacters(),
+        streamingLinks = externalLinks.toDomainStreamingLinks()
+    )
+}
+
+private fun AnimeDetailsQuery.Characters?.toDomainCharacters(): List<AnimeCharacter> =
+    this?.edges.orEmpty()
+        .mapNotNull { edge ->
+            val character = edge?.node ?: return@mapNotNull null
+            val name = character.name?.full.nonBlank() ?: return@mapNotNull null
+            val imageUrl = character.image?.large.nonBlank()
+                ?: character.image?.medium.nonBlank()
+                ?: return@mapNotNull null
+            AnimeCharacter(
+                id = character.id,
+                name = name,
+                imageUrl = imageUrl,
+                role = edge.role.toDomainCharacterRole(),
+                japaneseVoiceActor = edge.voiceActors.orEmpty()
+                    .firstNotNullOfOrNull { it?.name?.full.nonBlank() }
+            )
+        }
+        .distinctBy(AnimeCharacter::id)
+
+private fun List<AnimeDetailsQuery.ExternalLink?>?.toDomainStreamingLinks(): List<AnimeStreamingLink> {
+    return orEmpty()
+        .mapNotNull { link ->
+            link ?: return@mapNotNull null
+            val url = link.url.nonBlank()?.takeIf(String::isWebUrl) ?: return@mapNotNull null
+            if (link.type != ExternalLinkType.STREAMING || link.isDisabled == true) {
+                return@mapNotNull null
+            }
+            AnimeStreamingLink(
+                id = link.id,
+                site = link.site,
+                url = url,
+                iconUrl = link.icon.nonBlank()?.takeIf(String::isWebUrl),
+                language = link.language.nonBlank(),
+                notes = link.notes.nonBlank()
+            )
+        }
+        .distinctBy { it.site to it.url }
+}
+
+private fun CharacterRole?.toDomainCharacterRole(): AnimeCharacterRole = when (this) {
+    CharacterRole.MAIN -> AnimeCharacterRole.MAIN
+    CharacterRole.SUPPORTING -> AnimeCharacterRole.SUPPORTING
+    CharacterRole.BACKGROUND,
+    CharacterRole.UNKNOWN__,
+    null -> AnimeCharacterRole.BACKGROUND
 }
 
 private fun AnimeCardFields.toPreview(mediaType: MediaType?): AnimeMediaPreview? =
@@ -152,6 +209,8 @@ internal fun String.stripAniListHtml(): String =
         .trim()
 
 private fun String?.nonBlank(): String? = this?.takeIf(String::isNotBlank)
+
+private fun String.isWebUrl(): Boolean = startsWith("https://") || startsWith("http://")
 
 private fun Int?.scoreToTen(): Double? = this?.div(10.0)
 
