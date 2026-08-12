@@ -8,13 +8,17 @@ import com.example.animewiki.data.repository.AnimeRepository
 import com.example.animewiki.domain.model.Anime
 import com.example.animewiki.domain.model.AnimeBrowseCriteria
 import com.example.animewiki.domain.model.AnimeFilters
+import com.example.animewiki.domain.model.AnimeOrganization
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
@@ -39,6 +43,16 @@ class TopAnimeViewModel @Inject constructor(
     private val _genresState = MutableStateFlow<AnimeGenresState>(AnimeGenresState.Idle)
     val genresState: StateFlow<AnimeGenresState> = _genresState.asStateFlow()
 
+    private val _organization = MutableStateFlow<AnimeOrganization?>(null)
+    val organization: StateFlow<AnimeOrganization?> = _organization.asStateFlow()
+    private val _organizationQuery = MutableStateFlow("")
+    val organizationQuery: StateFlow<String> = _organizationQuery.asStateFlow()
+    private val _organizationsState =
+        MutableStateFlow<AnimeOrganizationsState>(AnimeOrganizationsState.Idle)
+    val organizationsState: StateFlow<AnimeOrganizationsState> =
+        _organizationsState.asStateFlow()
+    private var organizationSearchJob: Job? = null
+
     private val queryCriteria = _query
         .debounce { query -> if (query.isBlank()) 0L else 400L }
         .map { query -> AnimeBrowseCriteria.create(query, _filters.value) }
@@ -46,14 +60,17 @@ class TopAnimeViewModel @Inject constructor(
     private val criteria = merge(queryCriteria, filterCriteria.filterNotNull())
         .distinctUntilChanged()
 
-    val animeList: Flow<PagingData<Anime>> = criteria
-        .flatMapLatest { q ->
-            if (q.isDefault) {
-                repository.topAnime()
-            } else {
-                repository.searchAnime(q)
-            }
+    val animeList: Flow<PagingData<Anime>> = combine(criteria, _organization) { q, organization ->
+        q to organization
+    }.distinctUntilChanged().flatMapLatest { (q, organization) ->
+        if (organization != null) {
+            repository.organizationAnime(organization, q.filters.sort)
+        } else if (q.isDefault) {
+            repository.topAnime()
+        } else {
+            repository.searchAnime(q)
         }
+    }
         .cachedIn(viewModelScope)
 
     fun onQueryChange(newQuery: String) {
@@ -65,8 +82,13 @@ class TopAnimeViewModel @Inject constructor(
     }
 
     fun applyFilters(filters: AnimeFilters) {
-        _filters.value = filters
-        filterCriteria.value = AnimeBrowseCriteria.create(_query.value, filters)
+        val applied = if (_organization.value == null) {
+            filters
+        } else {
+            AnimeFilters(sort = filters.sort)
+        }
+        _filters.value = applied
+        filterCriteria.value = AnimeBrowseCriteria.create(_query.value, applied)
     }
 
     fun clearFilters() {
@@ -95,4 +117,35 @@ class TopAnimeViewModel @Inject constructor(
     }
 
     fun retryGenres() = loadGenres(forceRefresh = true)
+
+    fun onOrganizationQueryChange(query: String) {
+        _organizationQuery.value = query
+        loadOrganizations(query)
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    fun loadOrganizations(query: String = _organizationQuery.value) {
+        organizationSearchJob?.cancel()
+        organizationSearchJob = viewModelScope.launch {
+            if (query.isNotBlank()) delay(300)
+            _organizationsState.value = AnimeOrganizationsState.Loading
+            _organizationsState.value = try {
+                AnimeOrganizationsState.Content(repository.searchOrganizations(query))
+            } catch (error: kotlinx.coroutines.CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                AnimeOrganizationsState.Error(error)
+            }
+        }
+    }
+
+    fun selectOrganization(organization: AnimeOrganization) {
+        _organization.value = organization
+        _query.value = ""
+        applyFilters(AnimeFilters(sort = _filters.value.sort))
+    }
+
+    fun clearOrganization() {
+        _organization.value = null
+    }
 }

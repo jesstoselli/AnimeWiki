@@ -64,28 +64,50 @@ Settings remain accessible from the top app bar. The exact final bottom-navigati
 - A cached page is never displayed for another filter combination.
 - Search, loading, empty, offline, and server-error states remain distinct.
 
-### R2 — Studio, producer, ordering, and composite cache
+### R2 — Ordering and organization browsing
 
-**Goal:** complete advanced discovery without destabilizing R1.
+**Goal:** complete advanced discovery using AniList semantics without turning one
+user action into a chain of dependent network requests.
 
 **User experience**
 
-- Add studio and producer selectors.
-- Add ordering by popularity, score, rank, or title where supported.
-- Display selected organizations as removable chips.
+- Add ordering by popularity, score, title, or release date where supported.
+- Add an organization browsing mode that presents animation studios and other
+  production companies separately, using AniList's `Studio.isAnimationStudio`
+  distinction.
+- Selecting an organization opens its paginated works in Discover.
+- Organization browsing is a distinct mode rather than a filter combined with
+  query, genre, format, and adult-content controls. Incompatible controls are
+  hidden or cleared when entering this mode.
 
 **Data behavior**
 
-- Obtain organizations from `/producers`.
-- Validate how Jikan identifies studios versus producers before exposing labels.
-- Normalize organization IDs and do not infer studio/producer roles from display names.
-- Keep cached combinations bounded so arbitrary filters do not grow the database indefinitely.
+- Use AniList `Studio`/`Page.studios` for organization discovery and
+  `Studio.media` for the selected organization's works.
+- Use `isAnimationStudio` rather than names to distinguish animation studios
+  from other production companies.
+- Each result-page load performs exactly one GraphQL HTTP request. Do not first
+  fetch media IDs and then issue a second request to apply unrelated media
+  filters.
+- Studio search/catalog loading is a separate user action and request; selecting
+  an organization starts the independently paginated works feed.
+- Do not use AniList's `licensedBy`/`licensedById` arguments as studio filters:
+  they represent online license providers, not production organizations.
+- Keep organization and non-default ordered feeds network-backed in the first
+  delivery, matching the existing search/filter behavior. Add bounded caching
+  later only if real usage shows it is valuable.
 
 **Acceptance criteria**
 
-- Studio and producer labels match the semantics returned by Jikan.
-- Ordering remains stable across pages.
-- Combining organization, genre, format, rating, and text query returns the expected request parameters.
+- Animation-studio and production-company labels match AniList's explicit
+  `isAnimationStudio` value.
+- Ordering remains stable across pages in regular discovery and organization
+  browsing.
+- Every organization works page is loaded with one GraphQL HTTP request.
+- Entering and leaving organization mode never leaves hidden regular filters
+  accidentally active.
+- Switching organization or ordering creates a fresh paging source and never
+  reuses results from the previous selection.
 
 ### R3 — Current season and upcoming premieres
 
@@ -324,7 +346,7 @@ Before release, run the complete unit test suite, compile the debug app, run Det
 | Release | Feature | Relative size |
 | --- | --- | --- |
 | R1 | Format, rating, and genre filters | Medium |
-| R2 | Studio, producer, ordering, and composite cache | Medium |
+| R2 | Ordering and organization browsing | Medium |
 | R3 | Current season and upcoming premieres | Medium |
 | R4 | Contextual recommendations | Small/medium |
 | R5 | Simple and filtered roulette | Small |

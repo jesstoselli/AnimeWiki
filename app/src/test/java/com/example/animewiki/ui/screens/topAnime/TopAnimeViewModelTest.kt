@@ -6,6 +6,8 @@ import com.example.animewiki.data.repository.AnimeRepository
 import com.example.animewiki.domain.model.AnimeFilters
 import com.example.animewiki.domain.model.AnimeFormat
 import com.example.animewiki.domain.model.AnimeGenre
+import com.example.animewiki.domain.model.AnimeOrganization
+import com.example.animewiki.domain.model.AnimeSort
 import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -39,6 +41,7 @@ class TopAnimeViewModelTest {
     private val repository: AnimeRepository = mockk {
         every { topAnime() } returns flowOf(PagingData.empty())
         every { searchAnime(any()) } returns flowOf(PagingData.empty())
+        every { organizationAnime(any(), any()) } returns flowOf(PagingData.empty())
     }
 
     @Before
@@ -56,6 +59,31 @@ class TopAnimeViewModelTest {
         val viewModel = TopAnimeViewModel(repository)
 
         assertEquals("", viewModel.query.value)
+    }
+
+    @Test
+    fun `selecting an organization clears incompatible criteria and loads its works`() = runTest {
+        val viewModel = TopAnimeViewModel(repository)
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.animeList.collect {}
+        }
+        viewModel.onQueryChange("frieren")
+        viewModel.applyFilters(
+            AnimeFilters(
+                format = AnimeFormat.TV,
+                sort = AnimeSort.POPULARITY,
+                genres = setOf("Fantasy")
+            )
+        )
+        val studio = AnimeOrganization(11, "Madhouse", true)
+
+        viewModel.selectOrganization(studio)
+        advanceUntilIdle()
+
+        assertEquals("", viewModel.query.value)
+        assertEquals(AnimeFilters(sort = AnimeSort.POPULARITY), viewModel.filters.value)
+        verify { repository.organizationAnime(studio, AnimeSort.POPULARITY) }
+        job.cancel()
     }
 
     @Test

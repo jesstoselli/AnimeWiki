@@ -4,7 +4,8 @@ query SearchAnime(
   $search: String,
   $format: MediaFormat,
   $genres: [String],
-  $isAdult: Boolean
+  $isAdult: Boolean,
+  $sort: [MediaSort!]!
 ) {
   Page(page: $page, perPage: $perPage) {
     pageInfo { currentPage hasNextPage }
@@ -14,7 +15,7 @@ query SearchAnime(
       format: $format,
       genre_in: $genres,
       isAdult: $isAdult,
-      sort: [SCORE_DESC]
+      sort: $sort
     ) {
       ...AnimeCardFields
     }

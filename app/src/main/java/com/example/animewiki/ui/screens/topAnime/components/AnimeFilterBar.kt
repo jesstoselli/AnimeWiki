@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.FilledTonalButton
@@ -21,11 +22,16 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.example.animewiki.R
 import com.example.animewiki.domain.model.AnimeFilters
+import com.example.animewiki.domain.model.AnimeOrganization
+import com.example.animewiki.domain.model.AnimeSort
 
 @Composable
 internal fun AnimeFilterBar(
     filters: AnimeFilters,
+    organization: AnimeOrganization?,
     onOpen: () -> Unit,
+    onOpenOrganizations: () -> Unit,
+    onClearOrganization: () -> Unit,
     onChange: (AnimeFilters) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -49,6 +55,19 @@ internal fun AnimeFilterBar(
             Spacer(Modifier.width(6.dp))
             Text(filtersLabel)
             if (filters.activeCount > 0) Text(" (${filters.activeCount})")
+        }
+        FilledTonalButton(onClick = onOpenOrganizations) {
+            Icon(Icons.Default.Business, contentDescription = null)
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.organizations_open))
+        }
+        organization?.let {
+            RemovableFilterChip(it.name, onClearOrganization)
+        }
+        if (filters.sort != AnimeSort.SCORE) {
+            RemovableFilterChip(stringResource(filters.sort.labelRes())) {
+                onChange(filters.copy(sort = AnimeSort.SCORE))
+            }
         }
         filters.format?.let { format ->
             RemovableFilterChip(stringResource(format.labelRes())) {

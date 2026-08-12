@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.example.animewiki.R
 import com.example.animewiki.domain.model.AnimeFilters
 import com.example.animewiki.domain.model.AnimeFormat
+import com.example.animewiki.domain.model.AnimeSort
 import com.example.animewiki.ui.screens.topAnime.AnimeGenresState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,7 +48,8 @@ internal fun AnimeFilterSheet(
     genresState: AnimeGenresState,
     onDismiss: () -> Unit,
     onApply: (AnimeFilters) -> Unit,
-    onRetryGenres: () -> Unit
+    onRetryGenres: () -> Unit,
+    organizationMode: Boolean = false
 ) {
     var draft by remember(appliedFilters) { mutableStateOf(appliedFilters) }
 
@@ -67,10 +69,17 @@ internal fun AnimeFilterSheet(
                 genresState = genresState,
                 onDraftChange = { draft = it },
                 onRetryGenres = onRetryGenres,
+                organizationMode = organizationMode,
                 modifier = Modifier.weight(1f)
             )
             FilterSheetActions(
-                onClear = { draft = AnimeFilters() },
+                onClear = {
+                    draft = if (organizationMode) {
+                        AnimeFilters(sort = AnimeSort.SCORE)
+                    } else {
+                        AnimeFilters()
+                    }
+                },
                 onApply = { onApply(draft) }
             )
         }
@@ -83,6 +92,7 @@ private fun FilterOptions(
     genresState: AnimeGenresState,
     onDraftChange: (AnimeFilters) -> Unit,
     onRetryGenres: () -> Unit,
+    organizationMode: Boolean,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -92,42 +102,57 @@ private fun FilterOptions(
     ) {
         item {
             FilterChoiceGroup(
-                title = R.string.filters_format,
-                options = AnimeFormat.entries,
-                selected = draft.format,
-                labelRes = AnimeFormat::labelRes,
-                onSelected = { onDraftChange(draft.copy(format = it)) }
+                title = R.string.filters_sort,
+                options = AnimeSort.entries,
+                selected = draft.sort,
+                labelRes = AnimeSort::labelRes,
+                onSelected = { onDraftChange(draft.copy(sort = it ?: AnimeSort.SCORE)) }
             )
         }
-        item {
-            AdultContentFilterRow(
-                selected = draft.includeAdultContent,
-                onSelectedChange = {
-                    onDraftChange(draft.copy(includeAdultContent = it))
-                }
-            )
-        }
-        item { FilterSectionTitle(R.string.filters_genres) }
-        when (genresState) {
-            AnimeGenresState.Idle, AnimeGenresState.Loading -> item { CircularProgressIndicator() }
-
-            is AnimeGenresState.Error -> item {
-                GenreLoadError(onRetryGenres)
+        if (!organizationMode) {
+            item {
+                FilterChoiceGroup(
+                    title = R.string.filters_format,
+                    options = AnimeFormat.entries,
+                    selected = draft.format,
+                    labelRes = AnimeFormat::labelRes,
+                    onSelected = { onDraftChange(draft.copy(format = it)) }
+                )
             }
-
-            is AnimeGenresState.Content -> items(genresState.genres, key = { it.name }) { genre ->
-                GenreFilterRow(
-                    name = genre.name,
-                    selected = genre.name in draft.genres,
-                    onSelectedChange = { selected ->
-                        val genres = if (selected) {
-                            draft.genres + genre.name
-                        } else {
-                            draft.genres - genre.name
-                        }
-                        onDraftChange(draft.copy(genres = genres))
+        }
+        if (!organizationMode) {
+            item {
+                AdultContentFilterRow(
+                    selected = draft.includeAdultContent,
+                    onSelectedChange = {
+                        onDraftChange(draft.copy(includeAdultContent = it))
                     }
                 )
+            }
+        }
+        if (!organizationMode) item { FilterSectionTitle(R.string.filters_genres) }
+        if (!organizationMode) {
+            when (genresState) {
+                AnimeGenresState.Idle, AnimeGenresState.Loading -> item { CircularProgressIndicator() }
+
+                is AnimeGenresState.Error -> item {
+                    GenreLoadError(onRetryGenres)
+                }
+
+                is AnimeGenresState.Content -> items(genresState.genres, key = { it.name }) { genre ->
+                    GenreFilterRow(
+                        name = genre.name,
+                        selected = genre.name in draft.genres,
+                        onSelectedChange = { selected ->
+                            val genres = if (selected) {
+                                draft.genres + genre.name
+                            } else {
+                                draft.genres - genre.name
+                            }
+                            onDraftChange(draft.copy(genres = genres))
+                        }
+                    )
+                }
             }
         }
     }

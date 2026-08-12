@@ -49,11 +49,13 @@ import com.example.animewiki.ui.screens.topAnime.components.AnimeFilterSheet
 import com.example.animewiki.ui.screens.topAnime.components.EmptyBrowseState
 import com.example.animewiki.ui.screens.topAnime.components.FullScreenError
 import com.example.animewiki.ui.screens.topAnime.components.LoadErrorBanner
+import com.example.animewiki.ui.screens.topAnime.components.OrganizationPickerSheet
 import com.example.animewiki.ui.screens.topAnime.components.SearchField
 import com.example.animewiki.ui.screens.topAnime.components.SkeletonGrid
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@Suppress("LongMethod")
 fun TopAnimeScreen(
     onAnimeClick: (Int) -> Unit,
     onSettingsClick: () -> Unit,
@@ -63,7 +65,11 @@ fun TopAnimeScreen(
     val query by viewModel.query.collectAsStateWithLifecycle()
     val filters by viewModel.filters.collectAsStateWithLifecycle()
     val genresState by viewModel.genresState.collectAsStateWithLifecycle()
+    val organization by viewModel.organization.collectAsStateWithLifecycle()
+    val organizationQuery by viewModel.organizationQuery.collectAsStateWithLifecycle()
+    val organizationsState by viewModel.organizationsState.collectAsStateWithLifecycle()
     var showFilters by rememberSaveable { mutableStateOf(false) }
+    var showOrganizations by rememberSaveable { mutableStateOf(false) }
 
     AnimeWikiScaffold(
         title = stringResource(R.string.discover_title),
@@ -81,20 +87,28 @@ fun TopAnimeScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            SearchField(
-                query = query,
-                onQueryChange = viewModel::onQueryChange,
-                onClear = viewModel::clearQuery,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-            )
+            if (organization == null) {
+                SearchField(
+                    query = query,
+                    onQueryChange = viewModel::onQueryChange,
+                    onClear = viewModel::clearQuery,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                )
+            }
             AnimeFilterBar(
                 filters = filters,
+                organization = organization,
                 onOpen = {
-                    viewModel.loadGenres()
+                    if (organization == null) viewModel.loadGenres()
                     showFilters = true
                 },
+                onOpenOrganizations = {
+                    viewModel.loadOrganizations()
+                    showOrganizations = true
+                },
+                onClearOrganization = viewModel::clearOrganization,
                 onChange = viewModel::applyFilters,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -103,7 +117,7 @@ fun TopAnimeScreen(
 
             TopAnimeBrowseResults(
                 items = items,
-                query = query,
+                query = organization?.name ?: query,
                 filters = filters,
                 onAnimeClick = onAnimeClick
             )
@@ -119,7 +133,22 @@ fun TopAnimeScreen(
                 viewModel.applyFilters(it)
                 showFilters = false
             },
-            onRetryGenres = viewModel::retryGenres
+            onRetryGenres = viewModel::retryGenres,
+            organizationMode = organization != null
+        )
+    }
+
+    if (showOrganizations) {
+        OrganizationPickerSheet(
+            query = organizationQuery,
+            state = organizationsState,
+            onQueryChange = viewModel::onOrganizationQueryChange,
+            onSelect = {
+                viewModel.selectOrganization(it)
+                showOrganizations = false
+            },
+            onRetry = { viewModel.loadOrganizations() },
+            onDismiss = { showOrganizations = false }
         )
     }
 }

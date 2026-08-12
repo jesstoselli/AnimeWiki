@@ -1,0 +1,9 @@
+query SearchOrganizations($search: String) {
+  Page(page: 1, perPage: 25) {
+    studios(search: $search, sort: [FAVOURITES_DESC]) {
+      id
+      name
+      isAnimationStudio
+    }
+  }
+}

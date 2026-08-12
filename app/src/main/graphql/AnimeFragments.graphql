@@ -6,6 +6,7 @@ fragment AnimeCardFields on Media {
   episodes
   format
   seasonYear
+  isAdult
 }
 
 fragment AnimeCacheFields on Media {

@@ -8,18 +8,23 @@ import androidx.paging.PagingData
 import androidx.paging.filter
 import androidx.paging.map
 import com.apollographql.apollo.ApolloClient
+import com.apollographql.apollo.api.Optional
 import com.example.animewiki.data.local.AppDatabase
 import com.example.animewiki.data.local.dao.FavoriteDao
 import com.example.animewiki.data.mapper.toDomain
 import com.example.animewiki.data.mapper.toFavoriteEntity
 import com.example.animewiki.data.paging.AnimeSearchPagingSource
+import com.example.animewiki.data.paging.OrganizationAnimePagingSource
 import com.example.animewiki.data.paging.TopAnimeRemoteMediator
 import com.example.animewiki.data.remote.dataOrAniListError
 import com.example.animewiki.domain.model.Anime
 import com.example.animewiki.domain.model.AnimeBrowseCriteria
 import com.example.animewiki.domain.model.AnimeGenre
+import com.example.animewiki.domain.model.AnimeOrganization
+import com.example.animewiki.domain.model.AnimeSort
 import com.example.animewiki.graphql.AnimeDetailsQuery
 import com.example.animewiki.graphql.GenreCollectionQuery
+import com.example.animewiki.graphql.SearchOrganizationsQuery
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable
@@ -86,6 +91,29 @@ class AnimeRepository @Inject constructor(
         val seenIds = mutableSetOf<Int>()
         pagingData.filter { anime -> seenIds.add(anime.id) }
     }
+
+    fun organizationAnime(
+        organization: AnimeOrganization,
+        sort: AnimeSort
+    ): Flow<PagingData<Anime>> = Pager(
+        config = PagingConfig(pageSize = 25, prefetchDistance = 10, enablePlaceholders = false),
+        pagingSourceFactory = {
+            OrganizationAnimePagingSource(apolloClient, organization, sort)
+        }
+    ).flow
+
+    suspend fun searchOrganizations(query: String): List<AnimeOrganization> =
+        apolloClient.query(
+            SearchOrganizationsQuery(
+                search = query.trim().takeIf(String::isNotBlank)
+                    ?.let(Optional.Companion::present) ?: Optional.absent()
+            )
+        ).execute().dataOrAniListError().Page?.studios.orEmpty()
+            .mapNotNull { studio ->
+                studio?.name?.takeIf(String::isNotBlank)?.let { name ->
+                    AnimeOrganization(studio.id, name, studio.isAnimationStudio)
+                }
+            }
 
     @Suppress("TooGenericExceptionCaught")
     suspend fun getAnimeGenres(forceRefresh: Boolean = false): List<AnimeGenre> {

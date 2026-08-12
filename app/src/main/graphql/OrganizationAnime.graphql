@@ -1,0 +1,13 @@
+query OrganizationAnime(
+  $id: Int!,
+  $page: Int!,
+  $perPage: Int!,
+  $sort: [MediaSort!]
+) {
+  Studio(id: $id) {
+    media(page: $page, perPage: $perPage, sort: $sort) {
+      pageInfo { currentPage hasNextPage }
+      nodes { ...AnimeCardFields }
+    }
+  }
+}

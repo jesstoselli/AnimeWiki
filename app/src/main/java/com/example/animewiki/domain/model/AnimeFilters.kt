@@ -5,25 +5,29 @@ import java.util.Collections
 class AnimeFilters(
     val format: AnimeFormat? = null,
     val includeAdultContent: Boolean = false,
+    val sort: AnimeSort = AnimeSort.SCORE,
     genres: Set<String> = emptySet()
 ) {
     val genres: Set<String> = Collections.unmodifiableSet(genres.toSet())
 
     val isEmpty: Boolean
-        get() = format == null && !includeAdultContent && genres.isEmpty()
+        get() = format == null && !includeAdultContent && sort == AnimeSort.SCORE && genres.isEmpty()
 
     val activeCount: Int
         get() = listOfNotNull(format).size +
             (if (includeAdultContent) 1 else 0) +
+            (if (sort != AnimeSort.SCORE) 1 else 0) +
             genres.size
 
     fun copy(
         format: AnimeFormat? = this.format,
         includeAdultContent: Boolean = this.includeAdultContent,
+        sort: AnimeSort = this.sort,
         genres: Set<String> = this.genres
     ): AnimeFilters = AnimeFilters(
         format = format,
         includeAdultContent = includeAdultContent,
+        sort = sort,
         genres = genres
     )
 
@@ -31,11 +35,13 @@ class AnimeFilters(
         this === other || other is AnimeFilters &&
             format == other.format &&
             includeAdultContent == other.includeAdultContent &&
+            sort == other.sort &&
             genres == other.genres
 
     override fun hashCode(): Int {
         var result = format?.hashCode() ?: 0
         result = 31 * result + includeAdultContent.hashCode()
+        result = 31 * result + sort.hashCode()
         result = 31 * result + genres.hashCode()
         return result
     }
@@ -44,6 +50,7 @@ class AnimeFilters(
         "AnimeFilters(" +
             "format=$format, " +
             "includeAdultContent=$includeAdultContent, " +
+            "sort=$sort, " +
             "genres=$genres" +
             ")"
 }

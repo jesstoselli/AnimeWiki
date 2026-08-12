@@ -48,7 +48,8 @@ class AnimeSearchPagingSource(
                         Optional.absent()
                     } else {
                         Optional.present(false)
-                    }
+                    },
+                    sort = listOf(filters.sort.toAniListMediaSort())
                 )
             ).execute().dataOrAniListError()
             val resultPage = requireNotNull(data.Page) {

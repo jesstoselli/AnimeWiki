@@ -31,6 +31,15 @@ class AnimeFiltersTest {
     }
 
     @Test
+    fun `non-default ordering is an active filter`() {
+        val filters = AnimeFilters(sort = AnimeSort.POPULARITY)
+
+        assertEquals(1, filters.activeCount)
+        assertFalse(filters.isEmpty)
+        assertTrue(AnimeFilters().isEmpty)
+    }
+
+    @Test
     fun `criteria trims query and identifies default feed`() {
         val default = AnimeBrowseCriteria.create("   ", AnimeFilters())
         val filtered = AnimeBrowseCriteria.create("  frieren  ", AnimeFilters())
