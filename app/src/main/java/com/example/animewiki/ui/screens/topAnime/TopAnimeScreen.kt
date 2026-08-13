@@ -1,5 +1,10 @@
 package com.example.animewiki.ui.screens.topAnime
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -87,7 +92,11 @@ fun TopAnimeScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            if (organization == null) {
+            AnimatedVisibility(
+                visible = organization == null,
+                enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+                exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top)
+            ) {
                 SearchField(
                     query = query,
                     onQueryChange = viewModel::onQueryChange,
@@ -112,7 +121,7 @@ fun TopAnimeScreen(
                 onChange = viewModel::applyFilters,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                    .padding(horizontal = 12.dp, vertical = 12.dp)
             )
 
             TopAnimeBrowseResults(

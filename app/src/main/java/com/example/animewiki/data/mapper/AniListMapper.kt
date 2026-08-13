@@ -206,6 +206,8 @@ internal fun String.stripAniListHtml(): String =
         .replace(Regex("<[^>]+>"), "")
         .replace("&amp;", "&")
         .replace("&quot;", "\"")
+        .replace(Regex("[ \\t]*\\n[ \\t]*"), "\n")
+        .replace(Regex("\\n{3,}"), "\n\n")
         .trim()
 
 private fun String?.nonBlank(): String? = this?.takeIf(String::isNotBlank)
