@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -30,6 +31,7 @@ import androidx.navigation.navDeepLink
 import com.example.animewiki.R
 import com.example.animewiki.ui.screens.details.AnimeDetailsScreen
 import com.example.animewiki.ui.screens.favorites.FavoritesScreen
+import com.example.animewiki.ui.screens.home.HomeScreen
 import com.example.animewiki.ui.screens.settings.SettingsScreen
 import com.example.animewiki.ui.screens.topAnime.TopAnimeScreen
 
@@ -41,6 +43,7 @@ object Routes {
 }
 
 object Tabs {
+    const val HOME = "home"
     const val TOP = "top"
     const val FAVORITES = "favorites"
 }
@@ -52,6 +55,7 @@ private data class TabItem(
 )
 
 private val tabs = listOf(
+    TabItem(Tabs.HOME, R.string.tab_home, Icons.Default.Home),
     TabItem(Tabs.TOP, R.string.tab_discover, Icons.Default.Explore),
     TabItem(Tabs.FAVORITES, R.string.tab_favorites, Icons.Default.Favorite)
 )
@@ -103,9 +107,15 @@ private fun MainTabs(
     ) { padding ->
         NavHost(
             navController = tabNavController,
-            startDestination = Tabs.TOP,
+            startDestination = Tabs.HOME,
             modifier = Modifier.padding(padding)
         ) {
+            composable(Tabs.HOME) {
+                HomeScreen(
+                    onAnimeClick = onAnimeClick,
+                    onSettingsClick = onSettingsClick
+                )
+            }
             composable(Tabs.TOP) {
                 TopAnimeScreen(
                     onAnimeClick = onAnimeClick,

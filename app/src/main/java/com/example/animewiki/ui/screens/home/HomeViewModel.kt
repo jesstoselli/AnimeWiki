@@ -40,7 +40,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
     private fun refresh(shelf: HomeShelf) {
         viewModelScope.launch {
             if (!hasContent(shelf)) set(shelf, ShelfState.Loading)
