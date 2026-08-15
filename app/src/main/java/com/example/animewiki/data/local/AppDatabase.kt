@@ -13,7 +13,7 @@ import com.example.animewiki.data.local.entity.RemoteKeyEntity
 @Database(
     entities = [AnimeEntity::class, RemoteKeyEntity::class, FavoriteEntity::class],
     version = 3,
-    exportSchema = false
+    exportSchema = true
 )
 @TypeConverters(StringListConverter::class)
 abstract class AppDatabase : RoomDatabase() {
