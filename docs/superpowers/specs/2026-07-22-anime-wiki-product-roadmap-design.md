@@ -327,6 +327,37 @@ The expanded details screen is section-based:
 
 Primary details load first. Secondary sections load only when needed, have independent state, and use independent caches. No secondary error replaces the primary details screen.
 
+### Expandable-section interaction
+
+The details expansion begins with synopsis, information, related titles, and
+contextual recommendations. Cover, title, score, rank, format, year, genres,
+and favorite action remain permanently visible.
+
+- Synopsis and Information start expanded.
+- Related titles, Recommendations, and future secondary sections start collapsed.
+- Each section expands and collapses independently.
+- Expansion state is retained while the user remains on the current anime.
+- Empty secondary sections are omitted instead of rendering empty accordions.
+- The same reusable section component will later host characters, episodes,
+  and streaming links so the screen does not become an unstructured long page.
+
+The characters delivery includes up to 12 relevant characters in the existing
+details request, ordered with main roles first. Each card shows the character,
+role, and first available Japanese voice actor. The section starts collapsed,
+has no navigation until the dedicated character or voice-actor areas exist, and
+is omitted when the response has no valid cards.
+
+Where to Watch uses enabled AniList external links whose type is `STREAMING`.
+Provider cards open the supplied URL, display provider metadata when available,
+and include a permanent note that availability may vary by region. The section
+starts collapsed and is omitted when no valid provider link exists. Episode
+catalog UI is deferred because AniList does not provide reliable historical
+episode titles, dates, filler, or recap metadata.
+
+For the first upgraded delivery, AniList relations and recommendations are
+included in the existing anime-details GraphQL request. This avoids extra
+network calls while preserving cache-first fallback for the primary details.
+
 ## 6. Testing strategy
 
 Each release includes:

@@ -16,5 +16,9 @@ data class Anime(
     val rating: String? = null,
     val duration: String? = null,
     val rank: Int? = null,
-    val trailerYoutubeId: String? = null
+    val trailerYoutubeId: String? = null,
+    val relations: List<AnimeRelation> = emptyList(),
+    val recommendations: List<AnimeRecommendation> = emptyList(),
+    val characters: List<AnimeCharacter> = emptyList(),
+    val streamingLinks: List<AnimeStreamingLink> = emptyList()
 )

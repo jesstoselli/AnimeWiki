@@ -1,9 +1,16 @@
 package com.example.animewiki.ui.screens.topAnime.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
@@ -51,22 +58,40 @@ internal fun AnimeFilterBar(
     ) {
         FilledTonalButton(
             onClick = onOpen,
-            modifier = Modifier.semantics { contentDescription = buttonDescription }
+            modifier = Modifier
+                .height(48.dp)
+                .semantics { contentDescription = buttonDescription },
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
         ) {
             Icon(Icons.Default.FilterList, contentDescription = null)
-            if (!hasActiveSelection) {
-                Spacer(Modifier.width(6.dp))
-                Text(filtersLabel)
+            AnimatedVisibility(
+                visible = !hasActiveSelection,
+                enter = fadeIn() + expandHorizontally(),
+                exit = fadeOut() + shrinkHorizontally()
+            ) {
+                Row {
+                    Spacer(Modifier.width(6.dp))
+                    Text(filtersLabel)
+                }
             }
         }
         FilledTonalButton(
             onClick = onOpenOrganizations,
-            modifier = Modifier.semantics { contentDescription = organizationsLabel }
+            modifier = Modifier
+                .height(48.dp)
+                .semantics { contentDescription = organizationsLabel },
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
         ) {
             Icon(Icons.Default.Business, contentDescription = null)
-            if (!hasActiveSelection) {
-                Spacer(Modifier.width(6.dp))
-                Text(organizationsLabel)
+            AnimatedVisibility(
+                visible = !hasActiveSelection,
+                enter = fadeIn() + expandHorizontally(),
+                exit = fadeOut() + shrinkHorizontally()
+            ) {
+                Row {
+                    Spacer(Modifier.width(6.dp))
+                    Text(organizationsLabel)
+                }
             }
         }
         organization?.let {

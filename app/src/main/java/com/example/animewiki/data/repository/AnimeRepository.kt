@@ -12,6 +12,7 @@ import com.apollographql.apollo.api.Optional
 import com.example.animewiki.data.local.AppDatabase
 import com.example.animewiki.data.local.dao.FavoriteDao
 import com.example.animewiki.data.mapper.toDomain
+import com.example.animewiki.data.mapper.toDomainDetails
 import com.example.animewiki.data.mapper.toFavoriteEntity
 import com.example.animewiki.data.paging.AnimeSearchPagingSource
 import com.example.animewiki.data.paging.OrganizationAnimePagingSource
@@ -69,8 +70,7 @@ class AnimeRepository @Inject constructor(
                 .execute()
                 .dataOrAniListError()
                 .Media
-                ?.animeCacheFields
-                ?.toDomain()
+                ?.toDomainDetails()
                 ?: cached
         } catch (e: CancellationException) {
             throw e

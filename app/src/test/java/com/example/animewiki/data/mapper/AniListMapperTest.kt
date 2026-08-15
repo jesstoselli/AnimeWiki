@@ -80,6 +80,15 @@ class AniListMapperTest {
     }
 
     @Test
+    fun `normalizes AniList paragraph spacing`() {
+        assertEquals(
+            "First paragraph.\n\nSecond paragraph.\n\n(Source: Example)",
+            "First paragraph.<br>\n<br>\nSecond paragraph.\n\n\n(Source: Example)"
+                .stripAniListHtml()
+        )
+    }
+
+    @Test
     fun `cache mapping preserves all current details and skips malformed list children`() {
         val fragment = cacheFragment {
             id = 154587
