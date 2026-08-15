@@ -385,7 +385,7 @@ import com.example.animewiki.domain.model.HomeShelfAnime
 import com.example.animewiki.graphql.SeasonAnimeQuery
 import com.example.animewiki.graphql.type.MediaSeason
 
-fun SeasonAnimeQuery.Media.toShelfAnime(): HomeShelfAnime? {
+fun SeasonAnimeQuery.Medium.toShelfAnime(): HomeShelfAnime? {
     val card = animeCardFields.toDomain() ?: return null
     return HomeShelfAnime(
         id = card.id,
