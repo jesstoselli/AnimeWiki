@@ -25,7 +25,9 @@ against the AniList GraphQL backend, and the modes live on their own screen.
 - Four horizontal shelves on Home, each a bounded preview (~25 items),
   horizontally scrollable, tapping a card opens the existing details screen:
   1. **This season** — current season media.
-  2. **Upcoming** — next season media (premieres not yet released).
+  2. **Upcoming** — not-yet-released premieres (most-anticipated first),
+     spanning the coming seasons and newly announced titles, not bound to a
+     single next season.
   3. **Top** — score ranking, reusing the existing Discover ranking data.
   4. **Trending** — AniList `TRENDING_DESC`.
 - Independent per-shelf loading, error, and retry.
@@ -86,26 +88,33 @@ card itself; eyebrow text is derived (see 6.2).
 
 ### 5.2 Season resolution
 
-A pure `SeasonResolver` computes the current and next AniList season from a
-supplied year/month, with no dependency on the system clock (the clock is read
-at the call site and passed in), so it is unit-testable:
+A pure `SeasonResolver` maps a supplied year/month to the **current** AniList
+season, with no dependency on the system clock (the clock is read at the call
+site and passed in), so it is unit-testable:
 
 - Boundaries: Winter = Jan–Mar, Spring = Apr–Jun, Summer = Jul–Sep,
   Fall = Oct–Dec.
-- `next(FALL, year)` rolls over to `(WINTER, year + 1)`.
 - Output maps to AniList `MediaSeason` (`WINTER`/`SPRING`/`SUMMER`/`FALL`) and
-  an `Int` season year.
+  the current `Int` year.
+
+Only the current season is needed: Upcoming is driven by a not-yet-released
+status filter (see 5.3), not by computing the next season.
 
 ### 5.3 GraphQL
 
-- New `SeasonAnime.graphql`: a `Page` query parameterized by `season`,
-  `seasonYear`, `sort`, `isAdult`, `page`, `perPage`, returning the existing
-  `animeCacheFields` fragment plus `nextAiringEpisode { episode airingAt }` for
-  the "This season" eyebrow. One query serves three shelves via different args:
-  - This season → `season = current`, `seasonYear = current`, `sort = POPULARITY_DESC`.
-  - Upcoming → `season = next`, `seasonYear = next`, `sort = POPULARITY_DESC`,
-    plus a not-yet-released constraint (`status: NOT_YET_RELEASED`).
-  - Trending → no season constraint, `sort = TRENDING_DESC`.
+- New `SeasonAnime.graphql`: a `Page` query with **optional** `season`,
+  `seasonYear`, `status`, and required `sort`, `isAdult`, `page`, `perPage`
+  arguments (absent optionals are simply omitted from the AniList `media`
+  filter), returning the existing `animeCacheFields` fragment plus
+  `nextAiringEpisode { episode airingAt }` for the "This season" eyebrow. One
+  query serves three shelves via different args:
+  - This season → `season = current`, `seasonYear = current`, `sort = POPULARITY_DESC`,
+    no status filter.
+  - Upcoming → `status = NOT_YET_RELEASED`, `sort = POPULARITY_DESC`, no season
+    binding — so the shelf spans the coming seasons and newly announced titles.
+    Each media still carries its own `season`/`seasonYear` for the premiere
+    eyebrow.
+  - Trending → no season/status constraint, `sort = TRENDING_DESC`.
 - **Top** reuses the existing ranking data. Its shelf reads the first ~25 rows
   from the existing `anime` Room table (populated by `TopAnimeRemoteMediator`),
   so it is already offline-capable and adds no new network path.
@@ -204,8 +213,8 @@ season or weekday name is hardcoded.
 
 ## 8. Testing strategy (TDD)
 
-- `SeasonResolverTest` — current/next season, and the Dec→(Winter, year+1)
-  rollover.
+- `SeasonResolverTest` — each month maps to the correct current season,
+  including the boundary months (Mar/Apr, Jun/Jul, Sep/Oct, Dec/Jan).
 - Shelf mapper tests — skip malformed/null entries without dropping valid ones;
   eyebrow derivation for each shelf type, including absent `nextAiringEpisode`.
 - `HomeViewModelTest` — the four shelves load and fail independently; retry
