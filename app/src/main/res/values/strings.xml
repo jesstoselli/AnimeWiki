@@ -95,6 +95,23 @@
     <string name="details_rating">Classificação</string>
     <string name="details_studio">Estúdio</string>
 
+    <!-- Home shelves -->
+    <string name="tab_home">Início</string>
+    <string name="home_title">Início</string>
+    <string name="home_shelf_this_season">Esta temporada</string>
+    <string name="home_shelf_upcoming">Próximas estreias</string>
+    <string name="home_shelf_top">Top</string>
+    <string name="home_shelf_trending">Em alta</string>
+    <string name="home_eyebrow_trending">Em alta</string>
+    <string name="home_eyebrow_rank">#%1$d</string>
+    <string name="home_eyebrow_episode">Ep %1$d · %2$s</string>
+    <string name="home_eyebrow_premiere">%1$s %2$d</string>
+    <string name="home_shelf_error">Não carregou. Tente de novo</string>
+    <string name="season_winter">Inverno</string>
+    <string name="season_spring">Primavera</string>
+    <string name="season_summer">Verão</string>
+    <string name="season_fall">Outono</string>
+
     <!-- Bottom navigation -->
     <string name="tab_top">Top</string>
     <string name="tab_favorites">Favoritos</string>
