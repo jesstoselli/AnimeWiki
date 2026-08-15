@@ -6,12 +6,12 @@ import org.junit.Test
 
 class AppDatabaseVersionTest {
     @Test
-    fun `provider boundary uses destructive Room version three`() {
+    fun `database is at migration-safe version four`() {
         val createOpenDelegate = AppDatabase_Impl::class.java
             .getDeclaredMethod("createOpenDelegate")
             .apply { isAccessible = true }
         val delegate = createOpenDelegate.invoke(AppDatabase_Impl()) as RoomOpenDelegate
 
-        assertEquals(3, delegate.version)
+        assertEquals(4, delegate.version)
     }
 }

@@ -12,6 +12,9 @@ interface AnimeDao {
     @Query("SELECT * FROM anime ORDER BY pageIndex ASC")
     fun pagingSource(): PagingSource<Int, AnimeEntity>
 
+    @Query("SELECT * FROM anime ORDER BY pageIndex ASC LIMIT :limit")
+    fun observeTop(limit: Int): kotlinx.coroutines.flow.Flow<List<AnimeEntity>>
+
     @Query("SELECT * FROM anime WHERE id = :id")
     suspend fun getById(id: Int): AnimeEntity?
 
