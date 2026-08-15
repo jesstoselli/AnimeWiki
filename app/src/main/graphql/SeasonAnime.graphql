@@ -1,0 +1,25 @@
+query SeasonAnime(
+  $page: Int!,
+  $perPage: Int!,
+  $season: MediaSeason,
+  $seasonYear: Int,
+  $status: MediaStatus,
+  $sort: [MediaSort!]!,
+  $isAdult: Boolean
+) {
+  Page(page: $page, perPage: $perPage) {
+    pageInfo { currentPage hasNextPage }
+    media(
+      type: ANIME,
+      season: $season,
+      seasonYear: $seasonYear,
+      status: $status,
+      sort: $sort,
+      isAdult: $isAdult
+    ) {
+      ...AnimeCardFields
+      season
+      nextAiringEpisode { episode airingAt }
+    }
+  }
+}
